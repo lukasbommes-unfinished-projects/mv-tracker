@@ -1,0 +1,34 @@
+### train ###
+
+static camera:
+- MOT17-02
+- MOT17-04
+- MOT17-09
+- KITTI-17
+- PETS09-S2L1
+- TUD-Campus
+- TUD-Stadtmitte
+
+moving camera:
+- MOT17-05
+- MOT17-10
+- MOT17-11
+- MOT17-13
+- ETH-Bahnhof
+- ETH-Sunnyday
+- KITTI-13
+
+
+### test ###
+
+static camera:
+- MOT17-01
+- MOT17-03
+- MOT17-08
+
+moving camera:
+- MOT17-06
+- MOT17-07
+- MOT17-12
+- MOT17-14
+

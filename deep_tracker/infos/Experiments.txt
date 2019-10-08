@@ -1,0 +1,10 @@
+Train and validate only Static cameras:
+
+dataset stats:
+
+x_channel -- mean: 0.0705440781107341, variance: 0.16182077023671781, std: 0.4022695243698158
+y_channel -- mean: 0.014817102005829075, variance: 0.003675252928826922, std: 0.060623864350822454
+
+motion_vectors = standardize(motion_vectors,
+    mean=[0.0, 0.014817102005829075, 0.0705440781107341],
+    std=[1.0, 0.060623864350822454,  0.4022695243698158])
