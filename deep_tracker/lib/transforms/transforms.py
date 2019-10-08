@@ -3,7 +3,7 @@ import cv2
 import torch
 
 
-def standardize(motion_vectors, mean, std):
+def standardize_motion_vectors(motion_vectors, mean, std):
     """Subtracts mean from motion vectors and divides by standard deviation.
 
     motion_vectors[channel] = (motion_vectors[channel] - mean[channel]) / std[channel]
@@ -26,6 +26,38 @@ def standardize(motion_vectors, mean, std):
     """
     motion_vectors = (motion_vectors - torch.tensor(mean)) / torch.tensor(std)
     return motion_vectors
+
+
+def standardize_velocities(velocities, mean, std, inverse=False):
+    """Subtracts mean from velocities and divides by standard deviation.
+
+    velocities[x] = (velocities[x] - mean[x]) / std[x], x = {v_xc, v_yc, v_w, v_h}
+
+    Args:
+        velocities (`torch.Tensor`): Box velocities with shape (B x K x 4)
+            where B is the batch size, K the maximum number of bounding boxes in
+            the dataset. The last dimenision stand for [v_cx, v_cy, v_w, v_h],
+            the velocities of each box center point and velocities of box width
+            and height.
+
+        mean (`list` of `float`): Mean values for [v_cx, v_cy, v_w, v_h] to
+            be subtracted from the velocities.
+
+        std (`list` of `float`): Standard deviations for [v_cx, v_cy, v_w, v_h]
+            by which to divide the mean subtracted velocities.
+
+        inverse (`bool`): If True compute the inverse of this transform, that is
+            velocities[x] = velocities[x] * std[x] + mean[x], x = {v_xc, v_yc,
+            v_w, v_h}
+
+    Returns:
+        (`torch.Tensor`) the standardized velocities with same shape as input.
+    """
+    if inverse:
+        velocities = velocities * torch.tensor(std) + torch.tensor(mean)
+    else:
+        velocities = (velocities - torch.tensor(mean)) / torch.tensor(std)
+    return velocities
 
 
 def scale_image(frame, short_side_min_len=600, long_side_max_len=1000):

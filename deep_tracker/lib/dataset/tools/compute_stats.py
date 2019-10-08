@@ -9,8 +9,7 @@ class RunningStats():
     def __init__(self):
         self.existingAggregate = (0, 0, 0)
 
-    def update(self, motion_vectors_channel):
-        newValue = np.mean(motion_vectors_channel)
+    def update(self, newValue):
         (count, mean, M2) = self.existingAggregate
         count += 1
         delta = newValue - mean
@@ -23,10 +22,11 @@ class RunningStats():
     def get_stats(self):
         (count, mean, M2) = self.existingAggregate
         (mean, variance) = (mean, M2/count)
+        std = np.sqrt(variance)
         if count < 2:
-            return float('nan')
+            return (float('nan'), float('nan'), float('nan'))
         else:
-            return (mean, variance)
+            return (mean, variance, std)
 
 
 # run as python -m lib.dataset.tools.compute_stats from root dir
@@ -43,19 +43,31 @@ if __name__ == "__main__":
         cv2.namedWindow("motion_vectors", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("motion_vectors", 640, 360)
 
-    runnings_stats_x = RunningStats()
-    runnings_stats_y = RunningStats()
+    runnings_stats_mvs_x = RunningStats()
+    runnings_stats_mvs_y = RunningStats()
+
+    runnings_stats_vel_xc = RunningStats()
+    runnings_stats_vel_yc = RunningStats()
+    runnings_stats_vel_w = RunningStats()
+    runnings_stats_vel_h = RunningStats()
 
     for step, ret in enumerate(dataloader_train):
 
         if visu:
-            (frames, motion_vectors, _, _, _) = ret
+            (frames, motion_vectors, _, velocities, _) = ret
         else:
-            (motion_vectors, _, _, _) = ret
+            (motion_vectors, _, velocities, _) = ret
 
         motion_vectors = motion_vectors[0].numpy()
-        runnings_stats_x.update(motion_vectors[:, :, 2])
-        runnings_stats_y.update(motion_vectors[:, :, 1])
+        runnings_stats_mvs_x.update(np.mean(motion_vectors[:, :, 2]))
+        runnings_stats_mvs_y.update(np.mean(motion_vectors[:, :, 1]))
+
+        velocities = velocities[0].numpy()
+        for v_xc, v_yc, v_w, v_h in velocities:
+            runnings_stats_vel_xc.update(v_xc)
+            runnings_stats_vel_yc.update(v_yc)
+            runnings_stats_vel_w.update(v_w)
+            runnings_stats_vel_h.update(v_h)
 
         if visu:
             frame = frames[0].numpy()
@@ -78,12 +90,15 @@ if __name__ == "__main__":
                         step_wise = False
                         break
 
-    final_mean_x, final_var_x = runnings_stats_x.get_stats()
-    final_std_x = np.sqrt(final_var_x)
-    final_mean_y, final_var_y = runnings_stats_y.get_stats()
-    final_std_y = np.sqrt(final_var_y)
-    print("x_channel -- mean: {}, variance: {}, std: {}".format(final_mean_x, final_var_x, final_std_x))
-    print("y_channel -- mean: {}, variance: {}, std: {}".format(final_mean_y, final_var_y, final_std_y))
+    # output finalized stats
+    print("mvs x -- mean: {}, variance: {}, std: {}".format(*runnings_stats_mvs_x.get_stats()))
+    print("mvs y -- mean: {}, variance: {}, std: {}".format(*runnings_stats_mvs_y.get_stats()))
+
+    print("vel xc -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_xc.get_stats()))
+    print("vel yc -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_yc.get_stats()))
+    print("vel w -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_w.get_stats()))
+    print("vel h -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_h.get_stats()))
+
 
     # Results on training set (h264):
     # x_channel -- mean: -0.3864056486553166, variance: 22.68331783471002, std: 4.76270068707976

@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     for mode in modes:
 
-        step_wise = True
+        step_wise = False
 
         for step, (motion_vectors, boxes_prev, velocities,
             num_boxes_mask, motion_vector_scale) in enumerate(dataloaders[mode]):

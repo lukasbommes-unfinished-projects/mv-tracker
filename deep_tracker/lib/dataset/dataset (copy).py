@@ -10,7 +10,7 @@ from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vector
     normalize_vectors, motion_vectors_to_image
 from lib.dataset.velocities import velocities_from_boxes
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
-from lib.transforms.transforms import standardize, scale_image
+from lib.transforms.transforms import standardize_motion_vectors, scale_image
 
 class MotionVectorDataset(torch.utils.data.Dataset):
     def __init__(self, root_dir, mode, batch_size, codec="mpeg4", pad_num_boxes=52, visu=False, debug=False):
@@ -327,11 +327,11 @@ if __name__ == "__main__":
 
         # apply transforms
         if codec == "h264":
-            motion_vectors_ = standardize(motion_vectors_,
+            motion_vectors_ = standardize_motion_vectors(motion_vectors_,
                 mean=[0.0, 0.3219420202390504, -0.3864056486553166],
                 std=[1.0, 1.277147814669969, 4.76270068707976])
         elif codec == "mpeg4":
-            motion_vectors_ = standardize(motion_vectors_,
+            motion_vectors_ = standardize_motion_vectors(motion_vectors_,
                 mean=[0.0, 0.1770176594258104, -0.12560456383521534],
                 std=[1.0, 0.7420489598781672, 1.8279847980299613])
 

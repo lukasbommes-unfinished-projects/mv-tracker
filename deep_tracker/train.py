@@ -39,6 +39,8 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
             else:
                 model.eval()
 
+            running_loss = []
+
             pbar = tqdm(total=len(dataloaders[phase]))
             for step, (motion_vectors, boxes_prev, velocities, _, motion_vector_scale) in enumerate(dataloaders[phase]):
 
@@ -53,11 +55,6 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                 boxes_prev = boxes_prev.to(device)
                 velocities = velocities.to(device)
                 motion_vector_scale = motion_vector_scale.to(device)
-
-                # normalize velocities to range [0, 1]
-                #vel_min = torch.min(velocities)
-                #vel_max = torch.max(velocities)
-                #velocities = (velocities - vel_min) / (vel_max - vel_min)
 
                 optimizer.zero_grad()
 
@@ -86,17 +83,18 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                         params_after_update = list(model.parameters())[0].clone()
 
                         # check if model parameters are still being updated
-                        if torch.allclose(params_before_update.data, params_after_update.data):
-                            raise RuntimeError("The model stopped learning. Parameters are not getting updated anymore.")
+                        #if torch.allclose(params_before_update.data, params_after_update.data):
+                        #    raise RuntimeError("The model stopped learning. Parameters are not getting updated anymore.")
 
                     pbar.update()
 
+                running_loss.append(loss.item())
                 writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
                 iterations[phase] += 1
 
             pbar.close()
 
-            epoch_loss = loss.item()
+            epoch_loss = np.mean(running_loss)
             print('{} Loss: {}'.format(phase, epoch_loss))
             writer.add_scalar('Epoch Loss/{}'.format(phase), epoch_loss, epoch)
 
@@ -112,7 +110,8 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
             #if phase == "val" and scheduler:
             #    scheduler.step(epoch_loss)
 
-        scheduler.step()
+        if scheduler:
+            scheduler.step()
 
         if epoch % 50 == 0:
             print(velocities)
@@ -149,4 +148,4 @@ if __name__ == "__main__":
     #criterion = nn.MSELoss(reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  # weight_decay=0.0001
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.1)
-    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=48, visu=True)
+    best_model = train(model, criterion, optimizer, scheduler=None, num_epochs=600, visu=True)

@@ -6,7 +6,9 @@ from tqdm import tqdm
 import torch
 
 from lib.dataset.dataset import MotionVectorDataset
-from lib.transforms.transforms import standardize, scale_image
+from lib.dataset.stats import Stats
+from lib.transforms.transforms import standardize_motion_vectors, \
+    standardize_velocities, scale_image
 
 
 # run as python -m lib.dataset.tools.precompute_dataset from root dir
@@ -18,6 +20,7 @@ if __name__ == "__main__":
     modes = ["train", "val"]  # which datasets to generate
     input_folder = "data"  # where to look for the input dataset, relative to root dir
     output_folder = "data_precomputed" # where to save the precomputed samples, relative to root dir
+    stats = Stats()
 
     items = ["motion_vectors", "boxes_prev", "velocities", "num_boxes_mask", "motion_vector_scale"]
 
@@ -39,15 +42,15 @@ if __name__ == "__main__":
         pbar = tqdm(total=len(dataloader))
         for step, (motion_vectors, boxes_prev, velocities, num_boxes_mask) in enumerate(dataloader):
 
+            # standardize velocities
+            velocities = standardize_velocities(velocities,
+                mean=stats.velocities["mean"],
+                std=stats.velocities["std"])
+
             # standardize motion vectors
-            if codec == "h264":
-                motion_vectors = standardize(motion_vectors,
-                    mean=[0.0, 0.3219420202390504, -0.3864056486553166],
-                    std=[1.0, 1.277147814669969, 4.76270068707976])
-            elif codec == "mpeg4":
-                motion_vectors = standardize(motion_vectors,
-                    mean=[0.0, 0.1770176594258104, -0.12560456383521534],
-                    std=[1.0, 0.7420489598781672, 1.8279847980299613])
+            motion_vectors = standardize_motion_vectors(motion_vectors,
+                mean=stats.motion_vectors["mean"],
+                std=stats.motion_vectors["std"])
 
             # resize spatial dimsions of motion vectors
             motion_vectors, motion_vector_scale = scale_image(motion_vectors, short_side_min_len=600, long_side_max_len=1000)
@@ -71,8 +74,8 @@ if __name__ == "__main__":
 
             # save data into output folder
             for item in items:
-                output_file = os.path.join(output_folder, mode, item, "{:08d}.pkl".format(step))
-                pickle.dump(data[item], open(output_file, "wb"))
+               output_file = os.path.join(output_folder, mode, item, "{:08d}.pkl".format(step))
+               pickle.dump(data[item], open(output_file, "wb"))
 
             pbar.update()
 

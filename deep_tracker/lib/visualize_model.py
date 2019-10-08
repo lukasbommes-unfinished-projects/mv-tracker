@@ -2,15 +2,26 @@ import cv2
 
 from lib.visu import draw_boxes
 from lib.dataset.velocities import box_from_velocities
+from lib.dataset.stats import Stats
+from lib.transforms.transforms import standardize_velocities
 
 
 class Visualizer:
+    def __init__(self):
+        self.stats = Stats()
 
     def save_inputs(self, motion_vectors, boxes_prev,  motion_vector_scale, velocities):
         motion_vectors = motion_vectors.detach().cpu()
         boxes_prev = boxes_prev.detach().cpu()
         motion_vector_scale = motion_vector_scale.detach().cpu()
         velocities = velocities.detach().cpu()
+
+        # undo the standardization of velocities prior to computing and plotting
+        # boxes from it
+        velocities = standardize_velocities(velocities,
+            mean=self.stats.velocities["mean"],
+            std=self.stats.velocities["std"], inverse=True)
+
         self.batch_size = motion_vectors.shape[0]
 
         # prepare motion vectors
@@ -40,6 +51,11 @@ class Visualizer:
         velocities_pred = velocities_pred.detach().cpu()
         velocities_pred = velocities_pred.view(self.batch_size, -1, 4)
         velocities_pred = velocities_pred[self.batch_idx, ...]
+        # undo the standardization
+        velocities_pred = standardize_velocities(velocities_pred,
+            mean=self.stats.velocities["mean"],
+            std=self.stats.velocities["std"], inverse=True)
+        # compute boxes from predcited velocities
         self.boxes_pred = box_from_velocities(self.boxes_prev, velocities_pred)
 
 
