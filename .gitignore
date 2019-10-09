@@ -19,6 +19,7 @@ deep_tracker/overfit_test/data
 deep_tracker/overfit_test/data_10_samples
 deep_tracker/overfit_test/data_whole_video
 deep_tracker/data_precomputed_full
+deep_tracker/models
 
 /benchmark/MOT17/MOT17.zip
 /dev_output/

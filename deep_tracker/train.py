@@ -1,9 +1,9 @@
 import os
 import time
 import copy
-import pickle
 from tqdm import tqdm
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,7 +19,7 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
     writer = SummaryWriter()
 
     best_model_wts = copy.deepcopy(model.state_dict())
-    pickle.dump(best_model_wts, open("models/best_model.pkl", "wb"))
+    torch.save(best_model_wts, "models/tracker/best_model.pth")
     best_loss = 99999.0
     iterations = {"train": 0, "val": 0}
 
@@ -67,7 +67,6 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                     velocities = velocities.view(-1, 4)
 
                     velocities_pred = model(motion_vectors, boxes_prev, motion_vector_scale)
-                    velocities_pred = velocities_pred.view(-1, 4)
 
                     # visualize model outputs
                     if visu:
@@ -100,12 +99,12 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
 
             #if phase == "val":
             #    model_wts = copy.deepcopy(model.state_dict())
-            #    pickle.dump(model_wts, open("models/model_{:04d}.pkl".format(epoch), "wb"))
+            #    torch.save(model_wts, "models/tracker/model_{:04d}.pth".format(epoch))
 
             if phase == "val" and epoch_loss < best_loss:
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
-                pickle.dump(best_model_wts, open("models/best_model.pkl", "wb"))
+                torch.save(best_model_wts, "models/tracker/best_model.pth")
 
             #if phase == "val" and scheduler:
             #    scheduler.step(epoch_loss)
@@ -146,6 +145,6 @@ if __name__ == "__main__":
 
     criterion = nn.SmoothL1Loss(reduction='mean')
     #criterion = nn.MSELoss(reduction='mean')
-    optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)  # weight_decay=0.0001
+    optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0005, amsgrad=False)  # weight_decay=0.0001
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.1)
-    best_model = train(model, criterion, optimizer, scheduler=None, num_epochs=600, visu=True)
+    best_model = train(model, criterion, optimizer, scheduler=None, num_epochs=600, visu=False)

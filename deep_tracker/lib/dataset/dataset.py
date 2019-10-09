@@ -5,7 +5,7 @@ import numpy as np
 
 from video_cap import VideoCap
 
-from lib.dataset.loaders import load_detections, load_groundtruth
+from lib.dataset.loaders import load_groundtruth
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
     normalize_vectors, motion_vectors_to_image
 from lib.dataset.velocities import velocities_from_boxes
@@ -320,7 +320,7 @@ if __name__ == "__main__":
     datasets = {x: MotionVectorDataset(root_dir='data', batch_size=batch_size, codec=codec, pad_num_boxes=52, visu=True, debug=True, mode=x) for x in ["train", "val", "test"]}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=batch_size, shuffle=False, num_workers=0) for x in ["train", "val"]}
     stats = Stats()
-    
+
     step_wise = False
 
     for batch_idx in range(batch_size):

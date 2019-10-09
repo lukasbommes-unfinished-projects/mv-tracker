@@ -52,7 +52,7 @@ if __name__ == "__main__":
                 mean=stats.motion_vectors["mean"],
                 std=stats.motion_vectors["std"])
 
-            # resize spatial dimsions of motion vectors
+            # resize spatial dimensions of motion vectors
             motion_vectors, motion_vector_scale = scale_image(motion_vectors, short_side_min_len=600, long_side_max_len=1000)
 
             # swap channel order of motion vectors from BGR to RGB

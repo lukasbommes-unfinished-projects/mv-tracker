@@ -55,7 +55,7 @@ class Visualizer:
         velocities_pred = standardize_velocities(velocities_pred,
             mean=self.stats.velocities["mean"],
             std=self.stats.velocities["std"], inverse=True)
-        # compute boxes from predcited velocities
+        # compute boxes from predicted velocities
         self.boxes_pred = box_from_velocities(self.boxes_prev, velocities_pred)
 
 

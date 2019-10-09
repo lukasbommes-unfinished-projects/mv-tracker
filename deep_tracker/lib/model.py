@@ -67,7 +67,8 @@ class PropagationNetwork(nn.Module):
         spatial_scale = 1/16 * motion_vector_scale[0, 0]
         x = torchvision.ops.ps_roi_pool(x, boxes_prev, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=spatial_scale)
         x = self.pooling(x)
-        velocities_pred = x.squeeze()
+        x = x.squeeze()
+        velocities_pred = x.view(-1, 4)
         return velocities_pred
 
 
