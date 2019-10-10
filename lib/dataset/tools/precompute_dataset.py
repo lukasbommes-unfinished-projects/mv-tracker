@@ -22,7 +22,8 @@ if __name__ == "__main__":
     output_folder = "data_precomputed" # where to save the precomputed samples, relative to root dir
     stats = Stats()
 
-    items = ["motion_vectors", "boxes_prev", "velocities", "num_boxes_mask", "motion_vector_scale"]
+    items = ["motion_vectors", "boxes_prev", "velocities", "num_boxes_mask",
+        "motion_vector_scale", "det_boxes_prev"]
 
     for mode in modes:
 
@@ -35,12 +36,15 @@ if __name__ == "__main__":
                 "delete this directory before proceeding.")
                 raise FileExistsError(msg)
 
-        dataset = MotionVectorDataset(root_dir=input_folder, batch_size=batch_size, codec=codec, pad_num_boxes=52, visu=False, mode=mode)
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+        dataset = MotionVectorDataset(root_dir=input_folder,
+            batch_size=batch_size, codec=codec, visu=False, mode=mode)
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
+            shuffle=False, num_workers=0)
 
         print("Mode {} of {}".format(mode, modes))
         pbar = tqdm(total=len(dataloader))
-        for step, (motion_vectors, boxes_prev, velocities, num_boxes_mask) in enumerate(dataloader):
+        for step, (motion_vectors, boxes_prev, velocities, num_boxes_mask,
+            det_boxes_prev) in enumerate(dataloader):
 
             # standardize velocities
             velocities = standardize_velocities(velocities,
@@ -53,7 +57,8 @@ if __name__ == "__main__":
                 std=stats.motion_vectors["std"])
 
             # resize spatial dimensions of motion vectors
-            motion_vectors, motion_vector_scale = scale_image(motion_vectors, short_side_min_len=600, long_side_max_len=1000)
+            motion_vectors, motion_vector_scale = scale_image(motion_vectors,
+                short_side_min_len=600, long_side_max_len=1000)
 
             # swap channel order of motion vectors from BGR to RGB
             motion_vectors = motion_vectors[..., [2, 1, 0]]
@@ -69,7 +74,8 @@ if __name__ == "__main__":
                 "boxes_prev": boxes_prev,
                 "velocities": velocities,
                 "num_boxes_mask": num_boxes_mask,
-                "motion_vector_scale": motion_vector_scale
+                "motion_vector_scale": motion_vector_scale,
+                "det_boxes_prev": det_boxes_prev
             }
 
             # save data into output folder

@@ -8,7 +8,8 @@ import cv2
 
 class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
     def __init__(self, root_dir):
-        self.items = ["motion_vectors", "boxes_prev", "velocities", "num_boxes_mask", "motion_vector_scale"]
+        self.items = ["motion_vectors", "boxes_prev", "velocities",
+            "num_boxes_mask", "motion_vector_scale", "det_boxes_prev"]
         self.dirs = {}
         for item in self.items:
             self.dirs[item] = os.path.join(root_dir, item)
@@ -40,8 +41,8 @@ if __name__ == "__main__":
 
         step_wise = False
 
-        for step, (motion_vectors, boxes_prev, velocities,
-            num_boxes_mask, motion_vector_scale) in enumerate(dataloaders[mode]):
+        for step, (motion_vectors, boxes_prev, velocities, num_boxes_mask,
+            motion_vector_scale, det_boxes_prev) in enumerate(dataloaders[mode]):
 
             # remove batch dimension as precomputed data is already batched
             motion_vectors.squeeze_(0)
@@ -49,6 +50,7 @@ if __name__ == "__main__":
             velocities.squeeze_(0)
             num_boxes_mask.squeeze_(0)
             motion_vector_scale.squeeze_(0)
+            det_boxes_prev.squeeze_(0)
 
             print("Step: {}".format(step))
 
@@ -56,14 +58,12 @@ if __name__ == "__main__":
             print(boxes_prev.shape)
             print(velocities.shape)
             print(num_boxes_mask.shape)
+            print(det_boxes_prev.shape)
             print(motion_vector_scale)
 
             for batch_idx in range(motion_vectors.shape[0]):
 
                 motion_vectors_ = motion_vectors[batch_idx]
-                boxes_prev_ = boxes_prev[batch_idx]
-                velocities_ = velocities[batch_idx]
-                num_boxes_mask_ = num_boxes_mask[batch_idx]
 
                 print(type(motion_vectors_))
                 print(motion_vectors_.shape)

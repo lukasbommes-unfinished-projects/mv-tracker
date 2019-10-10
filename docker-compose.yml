@@ -2,12 +2,15 @@ version: "2.3"
 
 services:
 
-  mv_tracker:
-    container_name: mv_tracker
-    build: .
+  mv_tracker_deep_tracker:
+    container_name: mv_tracker_deep_tracker
+    image: pytorch4
+    runtime: nvidia
     environment:
       - DISPLAY
     ipc: host # for GUI
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # for GUI access
-      - .:/mvt
+      - .:/workspace
+    entrypoint: ./docker-entrypoint.sh
+    command: tail -f /dev/null

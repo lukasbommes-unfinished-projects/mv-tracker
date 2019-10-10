@@ -9,19 +9,9 @@ from video_cap import VideoCap
 from mvt.tracker import MotionVectorTracker
 from config import EvalConfig as Config
 
+from lib.dataset.loaders import load_detections
+
 import motmetrics as mm
-
-
-def load_detections(det_file, num_frames):
-    detections = []
-    raw_data = np.genfromtxt(det_file, delimiter=',')
-    for frame_idx in range(num_frames):
-        idx = np.where(raw_data[:, 0] == frame_idx+1)
-        if idx[0].size:
-            detections.append(np.stack(raw_data[idx], axis=0)[:, 2:6])
-        else:
-            detections.append(np.empty(shape=(0,10)))
-    return detections
 
 
 if __name__ == "__main__":

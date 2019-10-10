@@ -9,7 +9,7 @@ def load_detections(det_file, num_frames):
         if idx[0].size:
             detections.append(np.stack(raw_data[idx], axis=0)[:, 2:6])
         else:
-            detections.append(np.empty(shape=(0,10)))
+            detections.append(np.empty(shape=(0, 4)))
     return detections
 
 
