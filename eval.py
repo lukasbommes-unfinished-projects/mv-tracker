@@ -7,7 +7,6 @@ from tqdm import tqdm
 
 from video_cap import VideoCap
 from mvt.tracker import MotionVectorTracker
-from config import EvalConfig as Config
 
 from lib.dataset.loaders import load_detections
 
@@ -16,15 +15,21 @@ import motmetrics as mm
 
 if __name__ == "__main__":
 
-    print("Evaluating datasets: {}".format(Config.EVAL_DATASETS))
-    print("Evaluating with detections: {}".format(Config.EVAL_DETECTORS))
+    root_dir = "data/MOT17"
+    eval_detectors = ["FRCNN", "SDP", "DPM"]  # which detections to use, can contain "FRCNN", "SDP", "DPM"
+    eval_datasets = ["train"]  # which datasets to use, can contain "train" and "test"
+    detector_interval = 5
+    tracker_iou_thres = 0.1
 
-    train_dirs = sorted(glob.glob(os.path.join(Config.DATA_DIR, "train/*")))
-    test_dirs = sorted(glob.glob(os.path.join(Config.DATA_DIR, "test/*")))
+    print("Evaluating datasets: {}".format(eval_datasets))
+    print("Evaluating with detections: {}".format(eval_detectors))
+
+    train_dirs = sorted(glob.glob(os.path.join(root_dir, "train/*")))
+    test_dirs = sorted(glob.glob(os.path.join(root_dir, "test/*")))
     data_dirs = []
-    if "test" in Config.EVAL_DATASETS:
+    if "test" in eval_datasets:
         data_dirs += test_dirs
-    if "train" in Config.EVAL_DATASETS:
+    if "train" in eval_datasets:
         data_dirs += train_dirs
 
     for data_dir in data_dirs:
@@ -36,12 +41,12 @@ if __name__ == "__main__":
         sequence_name = data_dir.split('/')[-1]
 
         detector_name = sequence_name.split('-')[-1]
-        if detector_name not in Config.EVAL_DETECTORS:
+        if detector_name not in eval_detectors:
             continue
 
         print("Computing MOT metrics for sequence {}".format(sequence_name))
 
-        tracker = MotionVectorTracker(iou_threshold=Config.TRACKER_IOU_THRES)
+        tracker = MotionVectorTracker(iou_threshold=tracker_iou_thres)
         cap = VideoCap()
 
         ret = cap.open(video_file)
@@ -50,7 +55,7 @@ if __name__ == "__main__":
 
         frame_idx = 0
 
-        with open(os.path.join('output', '{}.txt'.format(sequence_name)), mode="w") as csvfile:
+        with open(os.path.join('eval_output', '{}.txt'.format(sequence_name)), mode="w") as csvfile:
 
             csv_writer = csv.writer(csvfile, delimiter=',')
 
@@ -61,7 +66,7 @@ if __name__ == "__main__":
                     break
 
                 # update with detections
-                if frame_idx % Config.DETECTOR_INTERVAL == 0:
+                if frame_idx % detector_interval == 0:
                     tracker.update(motion_vectors, frame_type, detections[frame_idx])
 
                 # prediction by tracker

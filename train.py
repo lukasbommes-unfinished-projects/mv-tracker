@@ -98,10 +98,6 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
             print('{} Loss: {}'.format(phase, epoch_loss))
             writer.add_scalar('Epoch Loss/{}'.format(phase), epoch_loss, epoch)
 
-            #if phase == "val":
-            #    model_wts = copy.deepcopy(model.state_dict())
-            #    torch.save(model_wts, "models/tracker/model_{:04d}.pth".format(epoch))
-
             if phase == "val" and epoch_loss < best_loss:
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
@@ -113,9 +109,8 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
         if scheduler:
             scheduler.step()
 
-        if epoch % 50 == 0:
-            print(velocities)
-            print(velocities_pred)
+        print(velocities)
+        print(velocities_pred)
 
     time_elapsed = time.time() - tstart
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
@@ -131,7 +126,7 @@ if __name__ == "__main__":
     train_parallel = True
     modes = ["train", "val"]
     datasets = {x: MotionVectorDatasetPrecomputed(root_dir=os.path.join(root_dir, x)) for x in modes}
-    dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1, shuffle=True, num_workers=0) for x in modes}
+    dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1, shuffle=True, num_workers=8) for x in modes}
 
     visualizer = Visualizer()
 
@@ -148,4 +143,6 @@ if __name__ == "__main__":
     #criterion = nn.MSELoss(reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0005, amsgrad=False)  # weight_decay=0.0001
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.1)
+    #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
+    #    factor=0.1, patience=10, )
     best_model = train(model, criterion, optimizer, scheduler=None, num_epochs=600, visu=False)

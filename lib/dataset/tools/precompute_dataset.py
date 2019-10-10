@@ -15,7 +15,7 @@ from lib.transforms.transforms import standardize_motion_vectors, \
 if __name__ == "__main__":
 
     # configure desired dataset settings here
-    batch_size = 8
+    batch_size = 32
     codec = "mpeg4"
     modes = ["train", "val"]  # which datasets to generate
     input_folder = "data"  # where to look for the input dataset, relative to root dir

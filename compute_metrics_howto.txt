@@ -1,1 +1,1 @@
-python3 compute_metrics.py benchmark/MOT17/train output
+python3 compute_metrics.py data/MOT17/train eval_output

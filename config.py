@@ -5,11 +5,3 @@ class Config(object):
     DETECTOR_INTERVAL = 20
     TRACKER_WEIGHTS_FILE = "models/tracker/09_10_2019.pth"
     TRACKER_IOU_THRES = 0.05
-
-
-class EvalConfig(Config):
-    DATA_DIR = "data/MOT17"  # root of MOT17 dataset
-    EVAL_DETECTORS = ["FRCNN", "SDP", "DPM"]  # which detections to use, can contain "FRCNN", "SDP", "DPM"
-    EVAL_DATASETS = ["train"]  # which datasets to use, can contain "train" and "test"
-    DETECTOR_INTERVAL = 5
-    TRACKER_IOU_THRES = 0.1

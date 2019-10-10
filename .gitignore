@@ -1,5 +1,5 @@
 *.avi
-/output/
+/eval_output/
 .ipynb_checkpoints/
 __pycache__/
 
@@ -15,6 +15,7 @@ __pycache__/
 /runs/
 pytorch.zip
 /data_precomputed/
+/data_precomputed*/
 /overfit_test/runs/
 /overfit_test/data/
 /overfit_test/data_10_samples/
