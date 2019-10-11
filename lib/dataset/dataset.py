@@ -312,9 +312,8 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             velocities_padded[:num_boxes, :] = velocities
             velocities = velocities_padded
 
-            # BUG: Velocities do not show up
-            #if self.visu:
-            #    frame = draw_velocities(frame, boxes, velocities)
+            if self.visu:
+                frame = draw_velocities(frame, boxes, velocities, scale=1000)
 
             # create a mask to revert the padding at a later stage
             num_boxes_mask = torch.zeros(self.pad_num_boxes,).bool()

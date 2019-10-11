@@ -75,8 +75,7 @@ def draw_boxes(frame, bounding_boxes, box_ids=None, color=(0, 255, 0)):
 
 def draw_velocities(frame, bounding_boxes, velocities, scale=100):
     for box, velocity in zip(bounding_boxes, velocities):
-        box = box*16.0
         start_pt = (int(box[0] + 0.5 * box[2]), int(box[1] + 0.5 * box[3]))
         end_pt = (int(start_pt[0] + scale*velocity[0]), int(start_pt[1] + scale*velocity[1]))
-        frame = cv2.arrowedLine(frame, start_pt, end_pt, (255, 255, 255), 1, cv2.LINE_AA, 0, 0.3)
+        frame = cv2.arrowedLine(frame, start_pt, end_pt, (255, 255, 255), 1, cv2.LINE_AA, 0, 0.1)
     return frame

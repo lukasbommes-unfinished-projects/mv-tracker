@@ -12,5 +12,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw  # for GUI access
       - .:/workspace
+    ports:
+      - "8888:8888"
     entrypoint: ./docker-entrypoint.sh
     command: tail -f /dev/null
