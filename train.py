@@ -42,14 +42,16 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
             running_loss = []
 
             pbar = tqdm(total=len(dataloaders[phase]))
-            for step, (motion_vectors, boxes_prev, velocities, _,
-                motion_vector_scale, _) in enumerate(dataloaders[phase]):
+            for step, sample in enumerate(dataloaders[phase]):
 
-                # remove batch dimension as precomputed data is already batched
-                motion_vectors.squeeze_(0)
-                boxes_prev.squeeze_(0)
-                velocities.squeeze_(0)
-                motion_vector_scale.squeeze_(0)
+                # remove batch dimension as batch size is always 1
+                for item in sample.values():
+                    item.squeeze_(0)
+
+                motion_vectors = sample["motion_vectors"]
+                boxes_prev = sample["boxes_prev"]
+                velocities = sample["velocities"]
+                motion_vector_scale = sample["scaling_factor"]
 
                 # move to GPU
                 motion_vectors = motion_vectors.to(device)

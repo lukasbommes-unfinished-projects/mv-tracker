@@ -49,6 +49,11 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
 
         # swap motion vector axes so that shape is (B, C, H, W) instead of (B, H, W, C)
         sample["motion_vectors"] = sample["motion_vectors"].permute(0, 3, 1, 2)
+
+        batch_size = sample["motion_vectors"].shape[0]
+        sample["scaling_factor"] = torch.tensor(sample["scaling_factor"])
+        sample["scaling_factor"] = sample["scaling_factor"].repeat(batch_size).view(-1, 1)
+
         return sample
 
 

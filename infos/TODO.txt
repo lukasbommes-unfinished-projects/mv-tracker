@@ -1,0 +1,7 @@
+- validate that inversion of motion vector during flip transform works
+- throw away old transforms file and use the new one throughout the code
+- rewrite train code to use new transforms
+- train neural network with transforms and see if generalization is better
+- add more data augmentation (e.g. translation)
+
+- change scale transforms to directly scale boxes, velocities, etc. as well instead of returning scaling factor
