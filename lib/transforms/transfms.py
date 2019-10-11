@@ -1,3 +1,42 @@
+"""Data transforms.
+
+All transforms below can be used with `torchvision.transforms.Compose`, e.g.
+
+```
+custom_transform = torchvision.transforms.Compose([
+    RandomFlip(directions=["x", "y"]),
+    StandardizeVelocities(mean=[1.3, 2.4, 0.2], std=[1.1, 1.5, 1.3]),
+    ScaleImage(items=["motion_vectors"], scale=600, max_size=1000),
+])
+```
+
+All the transforms can then be applied to a sample by calling
+```
+sample = custom_transform(sample)
+```
+
+The sample should be a Python dictionary with the following key values pairs:
+
+- motion_vectors (`torch.Tensor`): Motion vector image of shape
+    (B, H, W, C) or (H, W, C), dtype float32 and channel order BGR. Typically,
+    C = 3. Blue channel has no meaning, green channel corresponds to y component
+    of motion vector and red channel to x component of motion vector.
+
+- boxes_prev (`torch.Tensor`): Set of bounding boxes in previous frame. Shape
+    (B, N, 5) or (N, 5) with batch size B, number of boxes N and format
+    [frame_idx, xmin, ymin, w, h] in the last dimension.
+
+- velocities (`torch.Tensor`): Set of box velocities. Shape (B, N, 4) or (N, 4)
+    with batch size B, number of boxes N and format [v_xc, v_yc, v_w, v_h] in
+    the last dimenion. The last dimenision stand for the velocities of each box
+    center point and velocities of box width and height.
+
+- det_boxes_prev (`torch.Tensor`): Same format as `boxes_prev`, but these are
+    the detection boxes in the previous frame rather than the tracked boxes.
+
+The transforms might alter these values in place. So, if you want to keep them
+you have to make a copy manually.
+"""
 import random
 import pickle
 import copy
@@ -12,20 +51,11 @@ class StandardizeMotionVectors:
     motion_vectors[channel] = (motion_vectors[channel] - mean[channel]) / std[channel]
 
     Args:
-        motion_vectors (`torch.Tensor`): Motion vector image with shape (B x H x W X C)
-            and channel order BGR. Blue channel has no meaning, green channel
-            corresponds to y component of motion vector and red channel to x
-            component of motion vector.
-
         mean (`list` of `float`): Mean values for blue, green and red channel to
             be subtracted from the motion vector image.
 
         std (`list` of `float`): Standard deviations per channel by which to
             divide the mean subtracted motion vector image.
-
-    Returns:
-        (`torch.Tensor`) the standardized motion vector image with same shape
-        as input.
     """
     def __init__(self, mean, std):
         self.mean = torch.tensor(mean)
@@ -42,12 +72,6 @@ class StandardizeVelocities:
     velocities[x] = (velocities[x] - mean[x]) / std[x], x = {v_xc, v_yc, v_w, v_h}
 
     Args:
-        velocities (`torch.Tensor`): Box velocities with shape (B x K x 4)
-            where B is the batch size, K the maximum number of bounding boxes in
-            the dataset. The last dimenision stand for [v_cx, v_cy, v_w, v_h],
-            the velocities of each box center point and velocities of box width
-            and height.
-
         mean (`list` of `float`): Mean values for [v_cx, v_cy, v_w, v_h] to
             be subtracted from the velocities.
 
@@ -57,9 +81,6 @@ class StandardizeVelocities:
         inverse (`bool`): If True compute the inverse of this transform, that is
             velocities[x] = velocities[x] * std[x] + mean[x], x = {v_xc, v_yc,
             v_w, v_h}
-
-    Returns:
-        (`torch.Tensor`) the standardized velocities with same shape as input.
     """
     def __init__(self, mean, std, inverse=False):
         self.mean = torch.tensor(mean)
@@ -109,10 +130,9 @@ class ScaleImage:
     The shorter side is then smaller than specified by `scale`.
 
     Args:
-        frame (`torch.Tensor`): Batch of frames with shape (B, H, W, C) with
-            C = 3 and arbitrary datatype. Alternatively a single frame of shape
-            (H, W, C) can be provided. The frames are resized based on the
-            provided scaling factors.
+        items (`list` of `str`): Can be "motion_vectors" and/or "frame".
+            Determines whether to scale motion vectors and/or frame inside
+            the sample dict provided during call.
 
         scale (`int` or `float`): The desired size of the shorter
             side of the frame after scaling.
@@ -120,14 +140,8 @@ class ScaleImage:
         max_size (`int` or `float`): The desired maximum size of the
             longer side of the frame after scaling.
 
-        return_scale (`bool`): If True return the used scaling factor in the
-            output sample with the key `scaling_factor`.
-
-    Returns:
-        (`tuple`): First item is the batch of resized frames (`torch.Tensor`) or
-        the single resized frame depending of the input. Second item is the
-        computed scaling factor (`float`) which was used to scale both height
-        and width of the input frames.
+        return_scale (`bool`): If True return the used scaling factor is
+            inserted in the output sample with key `scaling_factor`.
     """
     def __init__(self, items=["motion_vectors"], scale=600, max_size=1000, return_scale=True):
         self.items = items
@@ -146,6 +160,23 @@ class ScaleImage:
 
 
 class RandomScaleImage:
+    """Scale motion vector or frame by a randomly chosen scale.
+
+    Args:
+        items (`list` of `str`): Can be "motion_vectors" and/or "frame".
+            Determines whether to scale motion vectors and/or frame inside
+            the sample dict provided during call.
+
+        scales (`list` of `int` or `list` of `float`): A set of scales one of
+            which is uniformly randomly chosen during each call of this
+            transform.
+
+        max_size (`int` or `float`): The desired maximum size of the
+            longer side of the frame after scaling.
+
+        return_scale (`bool`): If True return the used scaling factor is
+            inserted in the output sample with key `scaling_factor`.
+    """
     def __init__(self, items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=True):
         self.items = items
         self.scales = scales
@@ -163,139 +194,125 @@ class RandomScaleImage:
         return sample
 
 
-class RandomFlip:
-    """Randomly flips motion vectors, boxes and velocities.
+def flip_motion_vectors_(motion_vectors, direction):
+    # motion_vectors must have shape (H, W, C) with BGR order (x: red, y: green)
+    if direction == "y":
+        motion_vectors = cv2.flip(motion_vectors, 1)
+        motion_vectors[:, :, 2] = -1 * motion_vectors[:, :, 2]  # change sign of x-motion
+    elif direction == "x":
+        motion_vectors = cv2.flip(motion_vectors, 0)
+        motion_vectors[:, :, 1] = -1 * motion_vectors[:, :, 1]  # change sign of y-motion
+    return motion_vectors
 
-    Whether or not to flip is chosen randomly with equal probabilities. If a
-    flip along both horizontal and vertical axis shall be performed, it is first
-    dtermined whether to flip along horizontal axis (p = 0.5) and afterwards
-    whether to flip along vertical axis (p = 0.5). The probability of an image
-    being flipped both vertically and horizontally is thus p = 0.25.
+
+def flip_boxes_(boxes, direction, image_width, image_height):
+    # boxes must have shape (N, 4) with [xmin, ymin, w, h] in the last dim
+    if direction == "y":
+        boxes[:, 0] = image_width - boxes[:, 2] - boxes[:, 0]
+    elif direction == "x":
+        boxes[:, 1] = image_height - boxes[:, 3] - boxes[:, 1]
+    return boxes
+
+
+def flip_velocities_(velocities, direction):
+    # velocities must have shape (N, 4) with [v_xc, v_yc, v_w, v_h] in the last dim
+    if direction == "y":
+        velocities[:, 0] = -1 * velocities[:, 0]
+    elif direction == "x":
+        velocities[:, 1] = -1 * velocities[:, 1]
+    return velocities
+
+
+def flip_(motion_vectors, boxes_prev, det_boxes_prev, velocities, direction):
+    motion_vectors = motion_vectors.numpy()
+    # mvs have shape (H, W, C) or (B, H, W, C)
+    image_width = motion_vectors.shape[-2]
+    image_height = motion_vectors.shape[-3]
+    if motion_vectors.ndim == 3:
+        motion_vectors = flip_motion_vectors_(motion_vectors, direction)
+        boxes_prev[:, 1:] = flip_boxes_(boxes_prev[:, 1:], direction,
+            image_width, image_height)
+        det_boxes_prev[:, 1:] = flip_boxes_(det_boxes_prev[:, 1:],
+            direction, image_width, image_height)
+        velocities = flip_velocities_(velocities, direction)
+    elif motion_vectors.ndim == 4:
+        motion_vectors_flipped = []
+        for batch_idx in range(motion_vectors.shape[0]):
+            motion_vectors_flipped.append(flip_motion_vectors_(
+                motion_vectors[batch_idx, ...], direction))
+            boxes_prev[batch_idx, :, 1:] = flip_boxes_(
+                boxes_prev[batch_idx, :, 1:], direction, image_width,
+                image_height)
+            det_boxes_prev[batch_idx, :, 1:] = flip_boxes_(
+                det_boxes_prev[batch_idx, :, 1:], direction, image_width,
+                image_height)
+            velocities[batch_idx, ...] = flip_velocities_(
+                velocities[batch_idx, ...], direction)
+        motion_vectors = np.stack(motion_vectors_flipped, axis=0)
+    else:
+        raise ValueError("Invalid dimension of motion vectors")
+    motion_vectors = torch.from_numpy(motion_vectors)
+    return motion_vectors, boxes_prev, det_boxes_prev, velocities
+
+
+class Flip:
+    """Flips motion vectors, boxes and velocities along a given axis.
+
+    This method flips the motion vector image either along the x or y axis.
+    Bounding boxes and velocities are flipped accordingly. Also, the directions
+    of the motion vectors inside the motion vector image are inverted
+    accordingly.
 
     Args:
-        directions (`list` of `str`): List can contain "horizontal" and
-            "vertical" to determine along which axis a flip can occur.
+        direction (`str`): Either "x" or "y" indicating along which axis to
+        flip.
     """
-    def __init__(self, directions=["horizontal", "vertical"]):
-        self.directions = directions
-
-    def flip_boxes_(self, boxes, direction, image_width, image_height):
-        # boxes must have shape (N, 4) with [xmin, ymin, w, h] in the last dim
-        if direction == "horizontal":
-            boxes[:, 0] = image_width - boxes[:, 2] - boxes[:, 0]
-        elif direction == "vertical":
-            boxes[:, 1] = image_height - boxes[:, 3] - boxes[:, 1]
-        return boxes
-
-    def flip_velocities_(self, velocities, direction):
-        # velocities must have shape (N, 4) with [v_xc, v_yc, v_w, v_h] in the last dim
-        if direction == "horizontal":
-            velocities[:, 0] = -1 * velocities[:, 0]
-        elif direction == "vertical":
-            velocities[:, 1] = -1 * velocities[:, 1]
-        return velocities
-
-    def flip_(self, motion_vectors, boxes_prev, det_boxes_prev, velocities, direction):
-        motion_vectors = motion_vectors.numpy()
-
-        # for opencv flip function
-        if direction == "horizontal":
-            flip_code = 1
-        if direction == "vertical":
-            flip_code = 0
-
-        # mvs have shape (H, W, C) or (B, H, W, C)
-        image_width = motion_vectors.shape[-2]
-        image_height = motion_vectors.shape[-3]
-
-        if motion_vectors.ndim == 3:
-            motion_vectors = cv2.flip(motion_vectors, flip_code)  # flip around x axis
-            boxes_prev[:, 1:] = self.flip_boxes_(boxes_prev[:, 1:], direction,
-                image_width, image_height)
-            det_boxes_prev[:, 1:] = self.flip_boxes_(det_boxes_prev[:, 1:],
-                direction, image_width, image_height)
-            velocities = self.flip_velocities_(velocities, direction)
-
-        elif motion_vectors.ndim == 4:
-            motion_vectors_flipped = []
-            for batch_idx in range(motion_vectors.shape[0]):
-                motion_vectors_flipped.append(cv2.flip(
-                    motion_vectors[batch_idx, ...], flip_code))
-                boxes_prev[batch_idx, :, 1:] = self.flip_boxes_(
-                    boxes_prev[batch_idx, :, 1:], direction, image_width,
-                    image_height)
-                det_boxes_prev[batch_idx, :, 1:] = self.flip_boxes_(
-                    det_boxes_prev[batch_idx, :, 1:], direction, image_width,
-                    image_height)
-                velocities[batch_idx, ...] = self.flip_velocities_(
-                    velocities[batch_idx, ...], direction)
-            motion_vectors = np.stack(motion_vectors_flipped, axis=0)
-
-        else:
-            raise ValueError("Invalid dimension of motion vectors")
-
-        motion_vectors = torch.from_numpy(motion_vectors)
-
-        return motion_vectors, boxes_prev, det_boxes_prev, velocities
+    def __init__(self, direction="x"):
+        self.direction = direction
 
     def __call__(self, sample):
-        #direction = random.choice(self.directions)
         motion_vectors = sample["motion_vectors"]
         boxes_prev = sample["boxes_prev"]
         det_boxes_prev = sample["det_boxes_prev"]
         velocities = sample["velocities"]
-
-        # flip motion vector image
-        print(motion_vectors.shape)
-
-        motion_vectors, boxes_prev, det_boxes_prev, velocities = self.flip_(
+        motion_vectors, boxes_prev, det_boxes_prev, velocities = flip_(
             motion_vectors, boxes_prev, det_boxes_prev, velocities,
-            direction="horizontal")
-
+            direction=self.direction)
         sample["motion_vectors"] = motion_vectors
         sample["boxes_prev"] = boxes_prev
         sample["det_boxes_prev"] = det_boxes_prev
         sample["velocities"] = velocities
-
         return sample
 
 
-# class RandomFlipMotionVectors:
-#     def __init__(self, directions=["horizontal", "vertical"]):
-#         self.directions = directions
-#
-#     def __call__(self, sample)
-#         return sample
+class RandomFlip:
+    """Randomly flips motion vectors, boxes and velocities.
 
+    Whether or not to flip is chosen randomly with equal probabilities. If a
+    flip along both y and x axis shall be performed, it is first
+    dtermined whether to flip along y axis (p = 0.5) and afterwards
+    whether to flip along x axis (p = 0.5). The probability of an image
+    being flipped both along x and y axis is thus p = 0.25.
 
-# run as python -m lib.transforms.transfms from root dir
-#if __name__ == "__main__":
+    Args:
+        directions (`list` of `str`): List can contain "y" and
+            "x" to determine along which axis a flip can occur.
+    """
+    def __init__(self, directions=["x", "y"]):
+        self.directions = directions
 
-    # def sample_is_equal(sample, sample_transformed):
-    #     all_equal = True
-    #     for sample_item, transformed_item in zip(sample.values(), sample_transformed.values()):
-    #         print(torch.allclose(sample_item, transformed_item))
-    #         all_equal &= torch.allclose(sample_item, transformed_item)
-    #     return all_equal
-
-
-    # # load test data
-    # motion_vectors = pickle.load(open("lib/transforms/test_data/motion_vectors.pkl", "rb"))
-    # boxes_prev = pickle.load(open("lib/transforms/test_data/boxes_prev.pkl", "rb"))
-    # det_boxes_prev = pickle.load(open("lib/transforms/test_data/det_boxes_prev.pkl", "rb"))
-    # velocities = pickle.load(open("lib/transforms/test_data/velocities.pkl", "rb"))
-    #
-    # sample = {
-    #     "motion_vectors": motion_vectors,
-    #     "boxes_prev": boxes_prev,
-    #     "det_boxes_prev": det_boxes_prev,
-    #     "velocities": velocities
-    # }
-    #
-    # transform = StandardizeMotionVectors(
-    #     mean=[0.0, 0.014817102005829075, 0.0705440781107341],
-    #     std=[1.0, 0.060623864350822454,  0.4022695243698158])
-    #
-    # sample_transformed = transform(copy.deepcopy(sample))
-    #
-    # cv2.imshow
+    def __call__(self, sample):
+        motion_vectors = sample["motion_vectors"]
+        boxes_prev = sample["boxes_prev"]
+        det_boxes_prev = sample["det_boxes_prev"]
+        velocities = sample["velocities"]
+        for direction in self.directions:
+            if random.choice([True, False]):  # 50 percent chance that flip happens
+                motion_vectors, boxes_prev, det_boxes_prev, velocities = flip_(
+                    motion_vectors, boxes_prev, det_boxes_prev, velocities,
+                    direction=direction)
+        sample["motion_vectors"] = motion_vectors
+        sample["boxes_prev"] = boxes_prev
+        sample["det_boxes_prev"] = det_boxes_prev
+        sample["velocities"] = velocities
+        return sample

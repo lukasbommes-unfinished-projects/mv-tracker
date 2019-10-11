@@ -23,11 +23,11 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
 
         # prepare transforms
         self.transforms = torchvision.transforms.Compose([
-            #RandomFlip(directions=["horizontal", "vertical"]),
+            RandomFlip(directions=["x", "y"]),
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
-            ScaleImage(items=["motion_vectors"], scale=600, max_size=1000, return_scale=True),
-            #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=True),
+            #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000, return_scale=True),
+            RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=True),
         ])
 
     def __len__(self):
@@ -54,7 +54,7 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
 
 # run as python -m lib.dataset.dataset_precomputed from root dir
 if __name__ == "__main__":
-
+    import numpy as np
     root_dir = "data_precomputed"
     modes = ["train", "val"]
     datasets = {x: MotionVectorDatasetPrecomputed(root_dir=os.path.join(root_dir, x)) for x in modes}
@@ -78,6 +78,9 @@ if __name__ == "__main__":
             det_boxes_prev = sample["det_boxes_prev"]
 
             print("Step: {}".format(step))
+            print(motion_vectors)
+            print("mvs 0 x motion total:", torch.sum(motion_vectors[0, 0, :, :]))
+            print("mvs 0 y motion total:", torch.sum(motion_vectors[0, 1, :, :]))
 
             print(motion_vectors.shape)
             print(boxes_prev.shape)
