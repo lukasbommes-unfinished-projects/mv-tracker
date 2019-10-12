@@ -366,6 +366,7 @@ if __name__ == "__main__":
 
             frame = frames.numpy()
             motion_vectors = motion_vectors.numpy()
+            motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
 
             print("step: {}, MVS shape: {}".format(step, motion_vectors.shape))
 

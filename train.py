@@ -144,7 +144,7 @@ if __name__ == "__main__":
     criterion = nn.SmoothL1Loss(reduction='mean')
     #criterion = nn.MSELoss(reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0005, amsgrad=False)  # weight_decay=0.0001
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.1)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
-    best_model = train(model, criterion, optimizer, scheduler=None, num_epochs=600, visu=False)
+    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=80, visu=False)

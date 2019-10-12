@@ -33,9 +33,6 @@ The sample should be a Python dictionary with the following key values pairs:
 
 - det_boxes_prev (`torch.Tensor`): Same format as `boxes_prev`, but these are
     the detection boxes in the previous frame rather than the tracked boxes.
-
-The transforms might alter these values in place. So, if you want to keep them
-you have to make a copy manually.
 """
 import random
 import pickle
@@ -62,8 +59,11 @@ class StandardizeMotionVectors:
         self.std = torch.tensor(std)
 
     def __call__(self, sample):
-        sample["motion_vectors"] = (sample["motion_vectors"] - self.mean) / self.std
-        return sample
+        motion_vectors = sample["motion_vectors"].clone()
+        motion_vectors = (motion_vectors - self.mean) / self.std
+        sample_transformed = copy.deepcopy(sample)
+        sample_transformed["motion_vectors"] = motion_vectors
+        return sample_transformed
 
 
 class StandardizeVelocities:
@@ -88,14 +88,17 @@ class StandardizeVelocities:
         self.inverse = inverse
 
     def __call__(self, sample):
+        velocities = sample["velocities"].clone()
         if self.inverse:
-            sample["velocities"] = sample["velocities"] * self.std + self.mean
+            velocities = velocities * self.std + self.mean
         else:
-            sample["velocities"] = (sample["velocities"] - self.mean) / self.std
-        return sample
+            velocities = (velocities - self.mean) / self.std
+        sample_transformed = copy.deepcopy(sample)
+        sample_transformed["velocities"] = velocities
+        return sample_transformed
 
 
-def scale_(image, scale=600, max_size=1000):
+def scale_image_(image, scale=600, max_size=1000):
     # determine the scaling factor
     image = image.numpy()
     size_min = np.min(image.shape[-3:-1])
@@ -142,21 +145,34 @@ class ScaleImage:
 
         return_scale (`bool`): If True return the used scaling factor is
             inserted in the output sample with key `scaling_factor`.
+
+        scale_boxes (`bool`): If True scale `boxes_prev` and `det_boxes_prev`
+            by the scaling factor used to scale the motion vectors/frame.
     """
-    def __init__(self, items=["motion_vectors"], scale=600, max_size=1000, return_scale=True):
+    def __init__(self, items=["motion_vectors"], scale=600, max_size=1000, return_scale=True, scale_boxes=False):
         self.items = items
         self.scale = scale
         self.max_size = max_size
         self.return_scale = return_scale
+        self.scale_boxes = scale_boxes
 
     def __call__(self, sample):
+        sample_transformed = copy.deepcopy(sample)
         for item in self.items:
-            image = sample[item]
-            image_resized, scaling_factor = scale_(image, self.scale, self.max_size)
-            sample[item] = image_resized
+            image = sample[item].clone()
+            image_resized, scaling_factor = scale_image_(image, self.scale, self.max_size)
+            sample_transformed[item] = image_resized
+        # scale boxes
+        if self.scale_boxes:
+            boxes_prev = sample["boxes_prev"].clone()
+            det_boxes_prev = sample["det_boxes_prev"].clone()
+            boxes_prev[..., 1:] *= scaling_factor
+            det_boxes_prev[..., 1:] *= scaling_factor
+            sample_transformed["boxes_prev"] = boxes_prev
+            sample_transformed["det_boxes_prev"] = det_boxes_prev
         if self.return_scale:
-            sample["scaling_factor"] = scaling_factor
-        return sample
+            sample_transformed["scaling_factor"] = scaling_factor
+        return sample_transformed
 
 
 class RandomScaleImage:
@@ -176,22 +192,35 @@ class RandomScaleImage:
 
         return_scale (`bool`): If True return the used scaling factor is
             inserted in the output sample with key `scaling_factor`.
+
+        scale_boxes (`bool`): If True scale `boxes_prev` and `det_boxes_prev`
+            by the scaling factor used to scale the motion vectors/frame.
     """
-    def __init__(self, items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=True):
+    def __init__(self, items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=True, scale_boxes=False):
         self.items = items
         self.scales = scales
         self.max_size = max_size
         self.return_scale = return_scale
+        self.scale_boxes = scale_boxes
 
     def __call__(self, sample):
+        sample_transformed = copy.deepcopy(sample)
         scale = random.choice(self.scales)
         for item in self.items:
-            image = sample[item]
-            image_resized, scaling_factor = scale_(image, scale, self.max_size)
-            sample[item] = image_resized
+            image = sample[item].clone()
+            image_resized, scaling_factor = scale_image_(image, scale, self.max_size)
+            sample_transformed[item] = image_resized
+        # scale boxes
+        if self.scale_boxes:
+            boxes_prev = sample["boxes_prev"].clone()
+            det_boxes_prev = sample["det_boxes_prev"].clone()
+            boxes_prev[..., 1:] *= scaling_factor
+            det_boxes_prev[..., 1:] *= scaling_factor
+            sample_transformed["boxes_prev"] = boxes_prev
+            sample_transformed["det_boxes_prev"] = det_boxes_prev
         if self.return_scale:
-            sample["scaling_factor"] = scaling_factor
-        return sample
+            sample_transformed["scaling_factor"] = scaling_factor
+        return sample_transformed
 
 
 def flip_motion_vectors_(motion_vectors, direction):
@@ -271,18 +300,19 @@ class Flip:
         self.direction = direction
 
     def __call__(self, sample):
-        motion_vectors = sample["motion_vectors"]
-        boxes_prev = sample["boxes_prev"]
-        det_boxes_prev = sample["det_boxes_prev"]
-        velocities = sample["velocities"]
+        motion_vectors = sample["motion_vectors"].clone()
+        boxes_prev = sample["boxes_prev"].clone()
+        det_boxes_prev = sample["det_boxes_prev"].clone()
+        velocities = sample["velocities"].clone()
         motion_vectors, boxes_prev, det_boxes_prev, velocities = flip_(
             motion_vectors, boxes_prev, det_boxes_prev, velocities,
             direction=self.direction)
-        sample["motion_vectors"] = motion_vectors
-        sample["boxes_prev"] = boxes_prev
-        sample["det_boxes_prev"] = det_boxes_prev
-        sample["velocities"] = velocities
-        return sample
+        sample_transformed = copy.deepcopy(sample)
+        sample_transformed["motion_vectors"] = motion_vectors
+        sample_transformed["boxes_prev"] = boxes_prev
+        sample_transformed["det_boxes_prev"] = det_boxes_prev
+        sample_transformed["velocities"] = velocities
+        return sample_transformed
 
 
 class RandomFlip:
@@ -302,17 +332,18 @@ class RandomFlip:
         self.directions = directions
 
     def __call__(self, sample):
-        motion_vectors = sample["motion_vectors"]
-        boxes_prev = sample["boxes_prev"]
-        det_boxes_prev = sample["det_boxes_prev"]
-        velocities = sample["velocities"]
+        motion_vectors = sample["motion_vectors"].clone()
+        boxes_prev = sample["boxes_prev"].clone()
+        det_boxes_prev = sample["det_boxes_prev"].clone()
+        velocities = sample["velocities"].clone()
         for direction in self.directions:
             if random.choice([True, False]):  # 50 percent chance that flip happens
                 motion_vectors, boxes_prev, det_boxes_prev, velocities = flip_(
                     motion_vectors, boxes_prev, det_boxes_prev, velocities,
                     direction=direction)
-        sample["motion_vectors"] = motion_vectors
-        sample["boxes_prev"] = boxes_prev
-        sample["det_boxes_prev"] = det_boxes_prev
-        sample["velocities"] = velocities
-        return sample
+        sample_transformed = copy.deepcopy(sample)
+        sample_transformed["motion_vectors"] = motion_vectors
+        sample_transformed["boxes_prev"] = boxes_prev
+        sample_transformed["det_boxes_prev"] = det_boxes_prev
+        sample_transformed["velocities"] = velocities
+        return sample_transformed

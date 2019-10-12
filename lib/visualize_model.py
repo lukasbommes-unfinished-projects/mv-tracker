@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 from lib.visu import draw_boxes
 from lib.dataset.velocities import box_from_velocities
@@ -30,6 +31,7 @@ class Visualizer:
         motion_vectors = motion_vectors[[2, 1, 0], ...]
         motion_vectors = motion_vectors.permute(1, 2, 0)
         motion_vectors = motion_vectors.numpy()
+        motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
 
         # show boxes_prev
         boxes_prev = boxes_prev[batch_idx, ...]

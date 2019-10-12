@@ -27,7 +27,7 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
             #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000, return_scale=True),
-            RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=True),
+            RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920, return_scale=True),
         ])
 
     def __len__(self):
@@ -106,9 +106,10 @@ if __name__ == "__main__":
                 motion_vectors_ = motion_vectors_.permute(1, 2, 0)
                 motion_vectors_ = motion_vectors_[..., [2, 1, 0]]
                 motion_vectors_ = motion_vectors_.numpy()
-                motion_vectors_ = draw_boxes(motion_vectors_, boxes_prev_[:, 1:]*scaling_factor, None, color=(200, 200, 200))
-                motion_vectors_ = draw_boxes(motion_vectors_, det_boxes_prev_[:, 1:]*scaling_factor, None, color=(50, 255, 50))
-                motion_vectors_ = draw_velocities(motion_vectors_, boxes_prev_[:, 1:]*scaling_factor, velocities_, scale=100)
+                motion_vectors_ = (motion_vectors_ - np.min(motion_vectors_)) / (np.max(motion_vectors_) - np.min(motion_vectors_))
+                motion_vectors_ = draw_boxes(motion_vectors_, boxes_prev_[:, 1:]*scaling_factor[0, 0], None, color=(200, 200, 200))
+                motion_vectors_ = draw_boxes(motion_vectors_, det_boxes_prev_[:, 1:]*scaling_factor[0, 0], None, color=(50, 255, 50))
+                motion_vectors_ = draw_velocities(motion_vectors_, boxes_prev_[:, 1:]*scaling_factor[0, 0], velocities_, scale=100)
 
                 print("step: {}, MVS shape: {}".format(step, motion_vectors_.shape))
                 cv2.imshow("motion_vectors-{}".format(batch_idx), motion_vectors_)
