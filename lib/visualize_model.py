@@ -18,9 +18,11 @@ class Visualizer:
         cv2.namedWindow("motion_vectors", cv2.WINDOW_NORMAL)
         cv2.resizeWindow("motion_vectors", 640, 360)
 
-    def save_inputs(self, motion_vectors, boxes_prev, velocities):
+    def save_inputs(self, motion_vectors, boxes_prev, boxes, velocities):
         motion_vectors = motion_vectors.detach().cpu()
         boxes_prev = boxes_prev.detach().cpu()
+        boxes = boxes.detach().cpu()
+        self.boxes_gt = boxes.clone()
         velocities = velocities.detach().cpu()
 
         # undo the standardization of velocities prior to computing and plotting

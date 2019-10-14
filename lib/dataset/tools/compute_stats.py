@@ -51,18 +51,13 @@ if __name__ == "__main__":
     runnings_stats_vel_w = RunningStats()
     runnings_stats_vel_h = RunningStats()
 
-    for step, ret in enumerate(dataloader_train):
+    for step, sample in enumerate(dataloader_train):
 
-        if visu:
-            (frames, motion_vectors, _, velocities, _) = ret
-        else:
-            (motion_vectors, _, velocities, _) = ret
-
-        motion_vectors = motion_vectors[0].numpy()
+        motion_vectors = sample["motion_vectors"][0].numpy()
         runnings_stats_mvs_x.update(np.mean(motion_vectors[:, :, 2]))
         runnings_stats_mvs_y.update(np.mean(motion_vectors[:, :, 1]))
 
-        velocities = velocities[0].numpy()
+        velocities = sample["velocities"][0].numpy()
         for v_xc, v_yc, v_w, v_h in velocities:
             runnings_stats_vel_xc.update(v_xc)
             runnings_stats_vel_yc.update(v_yc)
@@ -70,10 +65,9 @@ if __name__ == "__main__":
             runnings_stats_vel_h.update(v_h)
 
         if visu:
-            frame = frames[0].numpy()
             print("step: {}, MVS shape: {}".format(step, motion_vectors.shape))
 
-            cv2.imshow("frame", frame)
+            cv2.imshow("frame", sample["frame"][0].numpy())
             cv2.imshow("motion_vectors", motion_vectors)
 
             key = cv2.waitKey(1)

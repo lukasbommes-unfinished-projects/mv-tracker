@@ -283,17 +283,16 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                 frame = draw_boxes(frame, boxes_prev, gt_ids_prev_, color=(200, 200, 200))
                 frame = draw_boxes(frame, det_boxes_prev, None, color=(50, 255, 50))
 
-            # pad boxes_prev to the same global length (for MOT17 this is 52)
+            # pad boxes_prev to the same global length as specified by pad_num_boxes
             num_boxes = (boxes.shape)[0]
             boxes_prev_padded = torch.zeros(self.pad_num_boxes, 4).float()
             boxes_prev_padded[:num_boxes, :] = boxes_prev
             boxes_prev = boxes_prev_padded
 
-            # insert frame index into boxes_prev
-            boxes_prev_tmp = torch.zeros(self.pad_num_boxes, 5).float()
-            boxes_prev_tmp[:, 1:5] = boxes_prev
-            boxes_prev_tmp[:, 0] = torch.full((self.pad_num_boxes,), self.current_frame_idx).float()
-            boxes_prev = boxes_prev_tmp
+            # pad boxes
+            boxes_padded = torch.zeros(self.pad_num_boxes, 4).float()
+            boxes_padded[:num_boxes, :] = boxes
+            boxes = boxes_padded
 
             # pad det_boxes_prev
             num_det_boxes = (det_boxes_prev.shape)[0]
@@ -301,19 +300,31 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             det_boxes_prev_padded[:num_det_boxes, :] = det_boxes_prev
             det_boxes_prev = det_boxes_prev_padded
 
+            # pad velocites
+            velocities_padded = torch.zeros(self.pad_num_boxes, 4).float()
+            velocities_padded[:num_boxes, :] = velocities
+            velocities = velocities_padded
+
+            # insert frame index into boxes_prev
+            boxes_prev_tmp = torch.zeros(self.pad_num_boxes, 5).float()
+            boxes_prev_tmp[:, 1:5] = boxes_prev
+            boxes_prev_tmp[:, 0] = torch.full((self.pad_num_boxes,), self.current_frame_idx).float()
+            boxes_prev = boxes_prev_tmp
+
+            # insert frame index into boxes
+            boxes_tmp = torch.zeros(self.pad_num_boxes, 5).float()
+            boxes_tmp[:, 1:5] = boxes
+            boxes_tmp[:, 0] = torch.full((self.pad_num_boxes,), self.current_frame_idx).float()
+            boxes = boxes_tmp
+
             # insert frame index into det_boxes_prev
             det_boxes_prev_tmp = torch.zeros(self.pad_num_boxes, 5).float()
             det_boxes_prev_tmp[:, 1:5] = det_boxes_prev
             det_boxes_prev_tmp[:, 0] = torch.full((self.pad_num_boxes,), self.current_frame_idx).float()
             det_boxes_prev = det_boxes_prev_tmp
 
-            # pad velocites
-            velocities_padded = torch.zeros(self.pad_num_boxes, 4).float()
-            velocities_padded[:num_boxes, :] = velocities
-            velocities = velocities_padded
-
             if self.visu:
-                frame = draw_velocities(frame, boxes, velocities, scale=1000)
+                frame = draw_velocities(frame, boxes[:, 1:], velocities, scale=1000)
 
             # create a mask to revert the padding at a later stage
             num_boxes_mask = torch.zeros(self.pad_num_boxes,).bool()
@@ -322,11 +333,19 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             self.current_frame_idx += 1
             self.frame_return_count += 1
 
-            if self.visu:
-                return (frame, motion_vectors, boxes_prev,
-                    velocities, num_boxes_mask, det_boxes_prev)
+            sample = {
+                "motion_vectors": motion_vectors,
+                "boxes_prev": boxes_prev,
+                "boxes": boxes,
+                "det_boxes_prev": det_boxes_prev,
+                "velocities": velocities,
+                "num_boxes_mask": num_boxes_mask,
+            }
 
-            return motion_vectors, boxes_prev, velocities, num_boxes_mask, det_boxes_prev
+            if self.visu:
+                sample["frame"] = frame
+
+            return sample
 
 
 # run as python -m lib.dataset.dataset from root dir
@@ -351,20 +370,15 @@ if __name__ == "__main__":
         cv2.namedWindow("motion_vectors-{}".format(batch_idx), cv2.WINDOW_NORMAL)
         cv2.resizeWindow("motion_vectors-{}".format(batch_idx), 640, 360)
 
-    for step, (frames_, motion_vectors_, boxes_prev_, velocities_,
-        num_boxes_mask_, det_boxes_prev_) in enumerate(dataloaders["train"]):
+    for step, sample in enumerate(dataloaders["train"]):
 
         # apply transforms
-        sample = transform({"motion_vectors": motion_vectors_})
-        motion_vectors_ = sample["motion_vectors"]
+        sample = transform(sample)
 
         for batch_idx in range(batch_size):
 
-            frames = frames_[batch_idx]
-            motion_vectors = motion_vectors_[batch_idx]
-
-            frame = frames.numpy()
-            motion_vectors = motion_vectors.numpy()
+            frame = sample["frame"][batch_idx].numpy()
+            motion_vectors = sample["motion_vectors"][batch_idx].numpy()
             motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
 
             print("step: {}, MVS shape: {}".format(step, motion_vectors.shape))

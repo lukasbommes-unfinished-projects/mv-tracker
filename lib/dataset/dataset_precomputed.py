@@ -13,7 +13,7 @@ from lib.visu import draw_boxes, draw_velocities
 
 class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
     def __init__(self, root_dir):
-        self.items = ["motion_vectors", "boxes_prev", "velocities",
+        self.items = ["motion_vectors", "boxes_prev", "boxes", "velocities",
             "num_boxes_mask", "det_boxes_prev"]
         self.dirs = {}
         for item in self.items:
@@ -83,7 +83,6 @@ if __name__ == "__main__":
             det_boxes_prev = sample["det_boxes_prev"]
 
             print("Step: {}".format(step))
-            print(motion_vectors)
             print("mvs 0 x motion total:", torch.sum(motion_vectors[0, 0, :, :]))
             print("mvs 0 y motion total:", torch.sum(motion_vectors[0, 1, :, :]))
 

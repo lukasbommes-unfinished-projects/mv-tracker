@@ -18,8 +18,8 @@ if __name__ == "__main__":
     input_folder = "data"  # where to look for the input dataset, relative to root dir
     output_folder = "data_precomputed" # where to save the precomputed samples, relative to root dir
 
-    items = ["motion_vectors", "boxes_prev", "velocities", "num_boxes_mask",
-        "det_boxes_prev"]
+    items = ["motion_vectors", "boxes_prev", "boxes", "velocities",
+        "num_boxes_mask", "det_boxes_prev"]
 
     for mode in modes:
 
@@ -39,21 +39,11 @@ if __name__ == "__main__":
 
         print("Mode {} of {}".format(mode, modes))
         pbar = tqdm(total=len(dataloader))
-        for step, (motion_vectors, boxes_prev, velocities, num_boxes_mask,
-            det_boxes_prev) in enumerate(dataloader):
-
-            data = {
-                "motion_vectors": motion_vectors,
-                "boxes_prev": boxes_prev,
-                "velocities": velocities,
-                "num_boxes_mask": num_boxes_mask,
-                "det_boxes_prev": det_boxes_prev
-            }
-
+        for step, sample in enumerate(dataloader):
             # save data into output folder
-            for item in items:
-               output_file = os.path.join(output_folder, mode, item, "{:08d}.pkl".format(step))
-               pickle.dump(data[item], open(output_file, "wb"))
+            for sample_name, data in sample.items():
+               output_file = os.path.join(output_folder, mode, sample_name, "{:08d}.pkl".format(step))
+               pickle.dump(data, open(output_file, "wb"))
 
             pbar.update()
 

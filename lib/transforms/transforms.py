@@ -123,6 +123,18 @@ def scale_image_(image, scale=600, max_size=1000):
     return image_resized, scaling_factor
 
 
+def scale_boxes_(sample, sample_transformed, scaling_factor, box_types):
+    # helper to scale multiple boxes only if exist in dictionary
+    for box_type in box_types:
+        try:
+            boxes = sample[box_type].clone()
+        except KeyError:
+            pass
+        else:
+            boxes[..., 1:] *= scaling_factor
+            sample_transformed[box_type] = boxes
+
+
 class ScaleImage:
     """Scale the motion vectors or frame considering a maximum size.
 
@@ -146,8 +158,9 @@ class ScaleImage:
         return_scale (`bool`): If True return the used scaling factor is
             inserted in the output sample with key `scaling_factor`.
 
-        scale_boxes (`bool`): If True scale `boxes_prev` and `det_boxes_prev`
-            by the scaling factor used to scale the motion vectors/frame.
+        scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
+            `det_boxes_prev` if existing by the scaling factor used to scale the
+            motion vectors/frame.
     """
     def __init__(self, items=["motion_vectors"], scale=600, max_size=1000, return_scale=False, scale_boxes=True):
         self.items = items
@@ -164,21 +177,8 @@ class ScaleImage:
             sample_transformed[item] = image_resized
         # scale boxes
         if self.scale_boxes:
-            try:
-                boxes_prev = sample["boxes_prev"].clone()
-            except KeyError:
-                pass
-            else:
-                boxes_prev[..., 1:] *= scaling_factor
-                sample_transformed["boxes_prev"] = boxes_prev
-
-            try:
-                det_boxes_prev = sample["det_boxes_prev"].clone()
-            except KeyError:
-                pass
-            else:
-                det_boxes_prev[..., 1:] *= scaling_factor
-                sample_transformed["det_boxes_prev"] = det_boxes_prev
+            scale_boxes_(sample, sample_transformed, scaling_factor,
+                ["boxes_prev", "boxes", "det_boxes_prev"])
         if self.return_scale:
             sample_transformed["scaling_factor"] = scaling_factor
         return sample_transformed
@@ -202,8 +202,9 @@ class RandomScaleImage:
         return_scale (`bool`): If True return the used scaling factor is
             inserted in the output sample with key `scaling_factor`.
 
-        scale_boxes (`bool`): If True scale `boxes_prev` and `det_boxes_prev`
-            by the scaling factor used to scale the motion vectors/frame.
+        scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
+            `det_boxes_prev` if existing by the scaling factor used to scale the
+            motion vectors/frame.
     """
     def __init__(self, items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=False, scale_boxes=True):
         self.items = items
@@ -211,6 +212,15 @@ class RandomScaleImage:
         self.max_size = max_size
         self.return_scale = return_scale
         self.scale_boxes = scale_boxes
+
+    def scale_boxes_(sample, sample_transformed, scaling_factor, box_type):
+        try:
+            boxes = sample[box_type].clone()
+        except KeyError:
+            pass
+        else:
+            boxes[..., 1:] *= scaling_factor
+            sample_transformed[box_type] = boxes
 
     def __call__(self, sample):
         sample_transformed = copy.deepcopy(sample)
@@ -221,21 +231,8 @@ class RandomScaleImage:
             sample_transformed[item] = image_resized
         # scale boxes
         if self.scale_boxes:
-            try:
-                boxes_prev = sample["boxes_prev"].clone()
-            except KeyError:
-                pass
-            else:
-                boxes_prev[..., 1:] *= scaling_factor
-                sample_transformed["boxes_prev"] = boxes_prev
-
-            try:
-                det_boxes_prev = sample["det_boxes_prev"].clone()
-            except KeyError:
-                pass
-            else:
-                det_boxes_prev[..., 1:] *= scaling_factor
-                sample_transformed["det_boxes_prev"] = det_boxes_prev
+            scale_boxes_(sample, sample_transformed, scaling_factor,
+                ["boxes_prev", "boxes", "det_boxes_prev"])
         if self.return_scale:
             sample_transformed["scaling_factor"] = scaling_factor
         return sample_transformed
@@ -270,36 +267,69 @@ def flip_velocities_(velocities, direction):
     return velocities
 
 
-def flip_(motion_vectors, boxes_prev, det_boxes_prev, velocities, direction):
-    motion_vectors = motion_vectors.numpy()
+def flip_(sample, sample_transformed, direction):
+    motion_vectors = sample["motion_vectors"].clone().numpy()
+    velocities = sample["velocities"].clone()
+    try:
+        boxes_prev = sample["boxes_prev"].clone()
+    except KeyError:
+        boxes_prev = None
+    try:
+        boxes = sample["boxes"].clone()
+    except KeyError:
+        boxes = None
+    try:
+        det_boxes_prev = sample["det_boxes_prev"].clone()
+    except KeyError:
+        det_boxes_prev = None
     # mvs have shape (H, W, C) or (B, H, W, C)
     image_width = motion_vectors.shape[-2]
     image_height = motion_vectors.shape[-3]
     if motion_vectors.ndim == 3:
         motion_vectors = flip_motion_vectors_(motion_vectors, direction)
-        boxes_prev[:, 1:] = flip_boxes_(boxes_prev[:, 1:], direction,
-            image_width, image_height)
-        det_boxes_prev[:, 1:] = flip_boxes_(det_boxes_prev[:, 1:],
-            direction, image_width, image_height)
+        if boxes_prev is not None:
+            boxes_prev[:, 1:] = flip_boxes_(boxes_prev[:, 1:], direction,
+                image_width, image_height)
+        if boxes is not None:
+            boxes[:, 1:] = flip_boxes_(boxes[:, 1:], direction,
+                image_width, image_height)
+        if det_boxes_prev is not None:
+            det_boxes_prev[:, 1:] = flip_boxes_(det_boxes_prev[:, 1:],
+                direction, image_width, image_height)
         velocities = flip_velocities_(velocities, direction)
     elif motion_vectors.ndim == 4:
         motion_vectors_flipped = []
         for batch_idx in range(motion_vectors.shape[0]):
             motion_vectors_flipped.append(flip_motion_vectors_(
                 motion_vectors[batch_idx, ...], direction))
-            boxes_prev[batch_idx, :, 1:] = flip_boxes_(
-                boxes_prev[batch_idx, :, 1:], direction, image_width,
-                image_height)
-            det_boxes_prev[batch_idx, :, 1:] = flip_boxes_(
-                det_boxes_prev[batch_idx, :, 1:], direction, image_width,
-                image_height)
+            if boxes_prev is not None:
+                boxes_prev[batch_idx, :, 1:] = flip_boxes_(
+                    boxes_prev[batch_idx, :, 1:], direction, image_width,
+                    image_height)
+            if boxes is not None:
+                boxes[batch_idx, :, 1:] = flip_boxes_(
+                    boxes[batch_idx, :, 1:], direction, image_width,
+                    image_height)
+            if det_boxes_prev is not None:
+                det_boxes_prev[batch_idx, :, 1:] = flip_boxes_(
+                    det_boxes_prev[batch_idx, :, 1:], direction, image_width,
+                    image_height)
             velocities[batch_idx, ...] = flip_velocities_(
                 velocities[batch_idx, ...], direction)
         motion_vectors = np.stack(motion_vectors_flipped, axis=0)
     else:
         raise ValueError("Invalid dimension of motion vectors")
     motion_vectors = torch.from_numpy(motion_vectors)
-    return motion_vectors, boxes_prev, det_boxes_prev, velocities
+    # pack into output dict
+    sample_transformed["motion_vectors"] = motion_vectors
+    sample_transformed["velocities"] = velocities
+    if boxes_prev is not None:
+        sample_transformed["boxes_prev"] = boxes_prev
+    if boxes is not None:
+        sample_transformed["boxes"] = boxes
+    if det_boxes_prev is not None:
+        sample_transformed["det_boxes_prev"] = det_boxes_prev
+    return sample_transformed
 
 
 class Flip:
@@ -318,18 +348,8 @@ class Flip:
         self.direction = direction
 
     def __call__(self, sample):
-        motion_vectors = sample["motion_vectors"].clone()
-        boxes_prev = sample["boxes_prev"].clone()
-        det_boxes_prev = sample["det_boxes_prev"].clone()
-        velocities = sample["velocities"].clone()
-        motion_vectors, boxes_prev, det_boxes_prev, velocities = flip_(
-            motion_vectors, boxes_prev, det_boxes_prev, velocities,
-            direction=self.direction)
         sample_transformed = copy.deepcopy(sample)
-        sample_transformed["motion_vectors"] = motion_vectors
-        sample_transformed["boxes_prev"] = boxes_prev
-        sample_transformed["det_boxes_prev"] = det_boxes_prev
-        sample_transformed["velocities"] = velocities
+        flip_(sample, sample_transformed, direction=self.direction)
         return sample_transformed
 
 
@@ -350,18 +370,8 @@ class RandomFlip:
         self.directions = directions
 
     def __call__(self, sample):
-        motion_vectors = sample["motion_vectors"].clone()
-        boxes_prev = sample["boxes_prev"].clone()
-        det_boxes_prev = sample["det_boxes_prev"].clone()
-        velocities = sample["velocities"].clone()
+        sample_transformed = copy.deepcopy(sample)
         for direction in self.directions:
             if random.choice([True, False]):  # 50 percent chance that flip happens
-                motion_vectors, boxes_prev, det_boxes_prev, velocities = flip_(
-                    motion_vectors, boxes_prev, det_boxes_prev, velocities,
-                    direction=direction)
-        sample_transformed = copy.deepcopy(sample)
-        sample_transformed["motion_vectors"] = motion_vectors
-        sample_transformed["boxes_prev"] = boxes_prev
-        sample_transformed["det_boxes_prev"] = det_boxes_prev
-        sample_transformed["velocities"] = velocities
+                flip_(sample, sample_transformed, direction=direction)
         return sample_transformed

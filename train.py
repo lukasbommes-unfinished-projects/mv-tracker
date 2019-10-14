@@ -52,6 +52,7 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
 
                 motion_vectors = sample["motion_vectors"]
                 boxes_prev = sample["boxes_prev"]
+                boxes = sample["boxes"]
                 velocities = sample["velocities"]
                 num_boxes_mask = sample["num_boxes_mask"]
 
@@ -67,7 +68,7 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
 
                     # visualize model inputs
                     if visu:
-                        visualizer.save_inputs(motion_vectors, boxes_prev, velocities)
+                        visualizer.save_inputs(motion_vectors, boxes_prev, boxes, velocities)
 
                     velocities = velocities[num_boxes_mask].view(-1, 4)
                     velocities_pred = model(motion_vectors, boxes_prev, num_boxes_mask)
