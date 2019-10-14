@@ -11,6 +11,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from lib.model import PropagationNetwork
 from lib.dataset.dataset_precomputed import MotionVectorDatasetPrecomputed
+from lib.dataset.velocities import box_from_velocities
+from lib.utils import compute_mean_iou
 from lib.visualize_model import Visualizer
 
 
@@ -19,6 +21,8 @@ torch.set_printoptions(precision=10)
 def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
     tstart = time.time()
     writer = SummaryWriter()
+    if visu:
+        visualizer = Visualizer()
 
     best_model_wts = copy.deepcopy(model.state_dict())
     torch.save(best_model_wts, "models/tracker/best_model.pth")
@@ -42,6 +46,7 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                 model.eval()
 
             running_loss = []
+            running_mean_iou = []
 
             pbar = tqdm(total=len(dataloaders[phase]))
             for step, sample in enumerate(dataloaders[phase]):
@@ -59,6 +64,7 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                 # move to GPU
                 motion_vectors = motion_vectors.to(device)
                 boxes_prev = boxes_prev.to(device)
+                boxes = boxes.to(device)
                 velocities = velocities.to(device)
                 num_boxes_mask = num_boxes_mask.to(device)
 
@@ -95,15 +101,30 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
 
                     pbar.update()
 
+                # track loss
                 running_loss.append(loss.item())
                 writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
+
+                # track mean IoU of all predicted and ground truth boxes
+                boxes_prev = boxes_prev[num_boxes_mask].detach()
+                velocities_pred = velocities_pred.detach()
+                boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
+                boxes = boxes[num_boxes_mask]
+                boxes = boxes[:, 1:]
+                mean_iou = compute_mean_iou(boxes_pred, boxes)
+                running_mean_iou.append(mean_iou)
+                writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
+
                 iterations[phase] += 1
 
             pbar.close()
 
+            # epoch loss and IoU
             epoch_loss = np.mean(running_loss)
-            print('{} Loss: {}'.format(phase, epoch_loss))
+            epoch_mean_iou = np.mean(running_mean_iou)
+            print('{} Loss: {}; {} Mean IoU: {}'.format(phase, epoch_loss, phase, epoch_mean_iou))
             writer.add_scalar('Epoch Loss/{}'.format(phase), epoch_loss, epoch)
+            writer.add_scalar('Epoch Mean IoU/{}'.format(phase), epoch_mean_iou, epoch)
 
             if phase == "val" and epoch_loss < best_loss:
                 best_loss = epoch_loss
@@ -135,8 +156,6 @@ if __name__ == "__main__":
     datasets = {x: MotionVectorDatasetPrecomputed(root_dir=os.path.join(root_dir, x)) for x in modes}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1, shuffle=True, num_workers=8) for x in modes}
 
-    visualizer = Visualizer()
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -152,4 +171,4 @@ if __name__ == "__main__":
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
-    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=80, visu=True)
+    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=80, visu=False)

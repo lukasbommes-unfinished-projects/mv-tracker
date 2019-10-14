@@ -218,22 +218,17 @@ def compute_iou(boxA, boxB):
         IoU (`float`): The IoU of the two boxes. It is within the range [0, 1],
         0 meaning no overlap and 1 meaning full overlap of the two boxes.
     """
-    def _intersection(boxA, boxB):
-        x = np.max((boxA[0], boxB[0]))
-        y = np.max((boxA[1], boxB[1]))
-        w = np.min((boxA[0] + boxA[2], boxB[0] + boxB[2])) - x
-        h = np.min((boxA[1] + boxA[3], boxB[1] + boxB[3])) - y
-        if w < 0 or h < 0:
-            return 0
-        else:
-            return w*h
-    def _union(boxA, boxB):
-        x = np.min((boxA[0], boxB[0]))
-        y = np.min((boxA[1], boxB[1]))
-        w = np.max((boxA[0] + boxA[2], boxB[0] + boxB[2])) - x
-        h = np.max((boxA[1] + boxA[3], boxB[1] + boxB[3])) - y
-        return w*h
-    return _intersection(boxA, boxB) / _union(boxA, boxB)
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[0] + boxA[2], boxB[0] + boxB[2])
+    yB = min(boxA[1] + boxA[3], boxB[1] + boxB[3])
+    interArea = abs(max((xB - xA, 0)) * max((yB - yA), 0))
+    if interArea == 0:
+        return 0
+    boxAArea = abs(boxA[2] * boxA[3])
+    boxBArea = abs(boxB[2] * boxB[3])
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+    return iou
 
 
 def match_bounding_boxes(t_boxes, d_boxes, iou_threshold):
