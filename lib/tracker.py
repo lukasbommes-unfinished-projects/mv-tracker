@@ -130,7 +130,8 @@ class MotionVectorTracker:
             velocities_pred = self.model(
                 self.last_motion_vectors.to(self.device),
                 boxes_prev.to(self.device),
-                self.last_motion_vector_scale.to(self.device))
+                self.last_motion_vector_scale.to(self.device),
+                None)
 
             # make sure output is on CPU
             velocities_pred = velocities_pred.cpu()
@@ -149,21 +150,6 @@ class MotionVectorTracker:
         boxes_prev = boxes_prev[..., 1:5]
         self.boxes = box_from_velocities(boxes_prev, velocities_pred).numpy()
         print(self.boxes)
-
-        # # I frame has no motion vectors
-        # if frame_type != "I":
-        #
-        #     # get non-zero motion vectors and normalize them to point to the past frame (source = -1)
-        #     motion_vectors = trackerlib.get_nonzero_vectors(motion_vectors)
-        #     motion_vectors = trackerlib.normalize_vectors(motion_vectors)
-        #
-        #     self.last_motion_vectors = motion_vectors
-        #
-        # # shift the box edges based on the contained motion vectors
-        # motion_vector_subsets = trackerlib.get_vectors_in_boxes(self.last_motion_vectors, self.boxes)
-        # shifts = trackerlib.get_box_shifts(motion_vector_subsets, metric="median")
-        # self.boxes = trackerlib.adjust_boxes(self.boxes, shifts)
-
 
     def get_boxes(self):
         return self.boxes

@@ -27,7 +27,7 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
             #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000, return_scale=True),
-            RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920, return_scale=True),
+            #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920, return_scale=True),
         ])
 
     def __len__(self):
@@ -51,8 +51,11 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
         sample["motion_vectors"] = sample["motion_vectors"].permute(0, 3, 1, 2)
 
         batch_size = sample["motion_vectors"].shape[0]
-        sample["scaling_factor"] = torch.tensor(sample["scaling_factor"])
-        sample["scaling_factor"] = sample["scaling_factor"].repeat(batch_size).view(-1, 1)
+        try:
+            sample["scaling_factor"] = torch.tensor(sample["scaling_factor"])
+            sample["scaling_factor"] = sample["scaling_factor"].repeat(batch_size).view(-1, 1)
+        except KeyError:
+            sample["scaling_factor"] = torch.ones(size=(batch_size, 1))
 
         return sample
 

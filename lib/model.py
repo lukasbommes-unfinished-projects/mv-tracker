@@ -55,12 +55,14 @@ class PropagationNetwork(nn.Module):
         print(list(self.children()))
 
 
-    def forward(self, motion_vectors, boxes_prev, motion_vector_scale):
+    def forward(self, motion_vectors, boxes_prev, motion_vector_scale, num_boxes_mask):
         x = self.base(motion_vectors)
         x = self.conv1x1(x)
 
-        boxes_prev = self._change_box_format(boxes_prev)
+        if num_boxes_mask is not None:
+            boxes_prev = boxes_prev[num_boxes_mask]
         boxes_prev = boxes_prev.view(-1, 5)
+        boxes_prev = self._change_box_format(boxes_prev)
         boxes_prev = self._frame_idx_to_batch_idx(boxes_prev)
 
         # compute ratio of input size to size of base output

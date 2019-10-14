@@ -14,6 +14,8 @@ from lib.dataset.dataset_precomputed import MotionVectorDatasetPrecomputed
 from lib.visualize_model import Visualizer
 
 
+torch.set_printoptions(precision=10)
+
 def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
     tstart = time.time()
     writer = SummaryWriter()
@@ -52,12 +54,14 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                 boxes_prev = sample["boxes_prev"]
                 velocities = sample["velocities"]
                 motion_vector_scale = sample["scaling_factor"]
+                num_boxes_mask = sample["num_boxes_mask"]
 
                 # move to GPU
                 motion_vectors = motion_vectors.to(device)
                 boxes_prev = boxes_prev.to(device)
                 velocities = velocities.to(device)
                 motion_vector_scale = motion_vector_scale.to(device)
+                num_boxes_mask = num_boxes_mask.to(device)
 
                 optimizer.zero_grad()
 
@@ -67,9 +71,8 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                     if visu:
                         visualizer.save_inputs(motion_vectors, boxes_prev, motion_vector_scale, velocities)
 
-                    velocities = velocities.view(-1, 4)
-
-                    velocities_pred = model(motion_vectors, boxes_prev, motion_vector_scale)
+                    velocities = velocities[num_boxes_mask].view(-1, 4)
+                    velocities_pred = model(motion_vectors, boxes_prev, motion_vector_scale, num_boxes_mask)
 
                     # visualize model outputs
                     if visu:
@@ -79,14 +82,17 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                     loss = criterion(velocities_pred, velocities)
 
                     if phase == "train":
-                        params_before_update = list(model.parameters())[0].clone()
+                        params_before_update = [p.detach().clone() for p in model.parameters()]
+
                         loss.backward()
                         optimizer.step()
-                        params_after_update = list(model.parameters())[0].clone()
 
-                        # check if model parameters are still being updated
-                        #if torch.allclose(params_before_update.data, params_after_update.data):
-                        #    raise RuntimeError("The model stopped learning. Parameters are not getting updated anymore.")
+                        # monitor magnitude of weights to weights update (should be around 0.001)
+                        params_after_update = [p.detach().clone() for p in model.parameters()]
+                        params_norm = torch.norm(torch.cat([p.flatten() for p in params_before_update], axis=0))
+                        updates = [(pa - pb).flatten() for pa, pb in zip(params_after_update, params_before_update)]
+                        updates_norm = torch.norm(torch.cat(updates, axis=0))
+                        writer.add_scalar('update to weight ratio', updates_norm / params_norm, iterations["train"])
 
                     pbar.update()
 

@@ -5,3 +5,5 @@
 - add more data augmentation (e.g. translation)
 
 - change scale transforms to directly scale boxes, velocities, etc. as well instead of returning scaling factor
+
+- add back the num_boxes_mask so that the model only uses the boxes and not the padded values
