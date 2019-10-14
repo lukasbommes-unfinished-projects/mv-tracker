@@ -2,6 +2,7 @@ import uuid
 from collections import OrderedDict
 
 import torch
+import torchvision
 import numpy as np
 import cv2
 import pickle
@@ -16,8 +17,7 @@ from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vector
     normalize_vectors, motion_vectors_to_image
 from lib.dataset.velocities import box_from_velocities
 from lib.dataset.stats import Stats
-from lib.transforms.transforms import standardize_motion_vectors, \
-    standardize_velocities, scale_image
+from lib.transforms.transforms import StandardizeMotionVectors, StandardizeVelocities
 
 
 class MotionVectorTracker:
@@ -28,7 +28,14 @@ class MotionVectorTracker:
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
         self.last_motion_vectors = torch.zeros(size=(1, 600, 1000, 3))
-        self.last_motion_vector_scale = torch.ones(size=(1, 1))
+
+        self.standardize_motion_vectors = StandardizeMotionVectors(
+            mean=Stats.motion_vectors["mean"],
+            std=Stats.motion_vectors["std"])
+        self.standardize_velocities = StandardizeVelocities(
+            mean=Stats.velocities["mean"],
+            std=Stats.velocities["std"],
+            inverse=True)
 
         # load model and weigths
         self.model = PropagationNetwork().to(self.device)
@@ -90,13 +97,8 @@ class MotionVectorTracker:
             motion_vectors = torch.from_numpy(motion_vectors).float()
             motion_vectors = motion_vectors.unsqueeze(0)  # add batch dimension
 
-            motion_vectors = standardize_motion_vectors(motion_vectors,
-                mean=Stats.motion_vectors["mean"],
-                std=Stats.motion_vectors["std"])
-
-            # resize spatial dimensions of motion vectors
-            motion_vectors, motion_vector_scale = scale_image(motion_vectors,
-                short_side_min_len=600, long_side_max_len=1000)
+            sample = self.standardize_motion_vectors({"motion_vectors": motion_vectors})
+            motion_vectors = sample["motion_vectors"]
 
             # swap channel order of motion vectors from BGR to RGB
             motion_vectors = motion_vectors[..., [2, 1, 0]]
@@ -104,10 +106,7 @@ class MotionVectorTracker:
             # swap motion vector axes so that shape is (B, C, H, W) instead of (B, H, W, C)
             motion_vectors = motion_vectors.permute(0, 3, 1, 2)
 
-            motion_vector_scale = torch.tensor(motion_vector_scale).view(1, 1)
-
             self.last_motion_vectors = motion_vectors
-            self.last_motion_vector_scale = motion_vector_scale
 
         print("###")
         print(motion_vectors.shape)
@@ -130,19 +129,16 @@ class MotionVectorTracker:
             velocities_pred = self.model(
                 self.last_motion_vectors.to(self.device),
                 boxes_prev.to(self.device),
-                self.last_motion_vector_scale.to(self.device),
                 None)
 
             # make sure output is on CPU
             velocities_pred = velocities_pred.cpu()
-
             velocities_pred = velocities_pred.view(1, -1, 4)
             velocities_pred = velocities_pred[0, ...]
 
             # undo the standardization of predicted velocities
-            velocities_pred = standardize_velocities(velocities_pred,
-                mean=Stats.velocities["mean"],
-                std=Stats.velocities["std"], inverse=True)
+            sample = self.standardize_velocities({"velocities": velocities_pred})
+            velocities_pred = sample["velocities"]
 
         # compute boxes from predicted velocities
         print("boxes_prev.shape before box_from_velocities:", boxes_prev.shape)

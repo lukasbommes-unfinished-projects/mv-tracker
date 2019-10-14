@@ -11,7 +11,7 @@ from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vector
 from lib.dataset.velocities import velocities_from_boxes
 from lib.dataset.stats import Stats
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
-from lib.transforms.transforms import standardize_motion_vectors, scale_image
+from lib.transforms.transforms import StandardizeMotionVectors
 
 
 class MotionVectorDataset(torch.utils.data.Dataset):
@@ -340,6 +340,9 @@ if __name__ == "__main__":
         shuffle=False, num_workers=0) for x in ["train", "val"]}
     stats = Stats()
 
+    transform = StandardizeMotionVectors(mean=stats.motion_vectors["mean"],
+        std=stats.motion_vectors["std"])
+
     step_wise = False
 
     for batch_idx in range(batch_size):
@@ -352,12 +355,8 @@ if __name__ == "__main__":
         num_boxes_mask_, det_boxes_prev_) in enumerate(dataloaders["train"]):
 
         # apply transforms
-        motion_vectors_ = standardize_motion_vectors(motion_vectors_,
-            mean=stats.motion_vectors["mean"],
-            std=stats.motion_vectors["std"])
-
-        frames_, scaling_factor = scale_image(frames_, short_side_min_len=600, long_side_max_len=1000)
-        motion_vectors_, scaling_factor = scale_image(motion_vectors_, short_side_min_len=600, long_side_max_len=1000)
+        sample = transform({"motion_vectors": motion_vectors_})
+        motion_vectors_ = sample["motion_vectors"]
 
         for batch_idx in range(batch_size):
 

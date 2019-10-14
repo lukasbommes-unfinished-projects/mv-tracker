@@ -53,14 +53,12 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
                 motion_vectors = sample["motion_vectors"]
                 boxes_prev = sample["boxes_prev"]
                 velocities = sample["velocities"]
-                motion_vector_scale = sample["scaling_factor"]
                 num_boxes_mask = sample["num_boxes_mask"]
 
                 # move to GPU
                 motion_vectors = motion_vectors.to(device)
                 boxes_prev = boxes_prev.to(device)
                 velocities = velocities.to(device)
-                motion_vector_scale = motion_vector_scale.to(device)
                 num_boxes_mask = num_boxes_mask.to(device)
 
                 optimizer.zero_grad()
@@ -69,14 +67,14 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
 
                     # visualize model inputs
                     if visu:
-                        visualizer.save_inputs(motion_vectors, boxes_prev, motion_vector_scale, velocities)
+                        visualizer.save_inputs(motion_vectors, boxes_prev, velocities)
 
                     velocities = velocities[num_boxes_mask].view(-1, 4)
-                    velocities_pred = model(motion_vectors, boxes_prev, motion_vector_scale, num_boxes_mask)
+                    velocities_pred = model(motion_vectors, boxes_prev, num_boxes_mask)
 
                     # visualize model outputs
                     if visu:
-                        visualizer.save_outputs(velocities_pred)
+                        visualizer.save_outputs(velocities_pred, num_boxes_mask)
                         visualizer.show()
 
                     loss = criterion(velocities_pred, velocities)
@@ -153,4 +151,4 @@ if __name__ == "__main__":
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
-    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=80, visu=False)
+    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=80, visu=True)

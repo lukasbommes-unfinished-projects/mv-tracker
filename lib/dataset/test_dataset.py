@@ -1,5 +1,6 @@
 import os
 import torch
+import torchvision
 import cv2
 import numpy as np
 
@@ -10,7 +11,7 @@ from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vector
     normalize_vectors, motion_vectors_to_image
 from lib.dataset.stats import Stats
 from lib.visu import draw_boxes, draw_motion_vectors
-from lib.transforms.transforms import standardize_motion_vectors, scale_image
+from lib.transforms.transforms import StandardizeMotionVectors, ScaleImage
 
 class MotionVectorDatasetTest(torch.utils.data.Dataset):
     def __init__(self, root_dir, codec="mpeg4", visu=False, debug=False):
@@ -152,10 +153,15 @@ class MotionVectorDatasetTest(torch.utils.data.Dataset):
 
             self.current_frame_idx += 1
 
-            if self.visu:
-                return (frame, motion_vectors, det_boxes_prev)
+            sample = {
+                "motion_vectors": motion_vectors,
+                "det_boxes_prev": det_boxes_prev,
+            }
 
-            return motion_vectors, det_boxes_prev
+            if self.visu:
+                sample["frame"] = frame
+
+            return sample
 
 
 # run as python -m lib.dataset.dataset from root dir
@@ -166,6 +172,11 @@ if __name__ == "__main__":
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
     stats = Stats()
 
+    transforms = torchvision.transforms.Compose([
+        StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
+        #RandomScaleImage(items=["motion_vectors", "frame"], scale=600, max_size=1000),
+    ])
+
     step_wise = False
 
     for batch_idx in range(batch_size):
@@ -174,21 +185,16 @@ if __name__ == "__main__":
         cv2.namedWindow("motion_vectors-{}".format(batch_idx), cv2.WINDOW_NORMAL)
         cv2.resizeWindow("motion_vectors-{}".format(batch_idx), 640, 360)
 
-    for step, (frames_, motion_vectors_, det_boxes_prev_) in enumerate(dataloader):
+    for step, sample in enumerate(dataloader):
 
         # apply transforms
-        motion_vectors_ = standardize_motion_vectors(motion_vectors_,
-            mean=stats.motion_vectors["mean"],
-            std=stats.motion_vectors["std"])
-
-        frames_, scaling_factor = scale_image(frames_, short_side_min_len=600, long_side_max_len=1000)
-        motion_vectors_, scaling_factor = scale_image(motion_vectors_, short_side_min_len=600, long_side_max_len=1000)
+        sample = transforms(sample)
 
         for batch_idx in range(batch_size):
 
-            frames = frames_[batch_idx]
-            motion_vectors = motion_vectors_[batch_idx]
-            det_boxes_prev_ = det_boxes_prev_[batch_idx]
+            frames = sample["frame"][batch_idx]
+            motion_vectors = sample["motion_vectors"][batch_idx]
+            det_boxes_prev = sample["det_boxes_prev"][batch_idx]
 
             frame = frames.numpy()
             motion_vectors = motion_vectors.numpy()

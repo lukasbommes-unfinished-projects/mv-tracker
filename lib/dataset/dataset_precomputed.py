@@ -5,7 +5,7 @@ import cv2
 import torch
 import torchvision
 
-from lib.transforms.transfms import StandardizeMotionVectors, \
+from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, ScaleImage, RandomScaleImage, RandomFlip
 from lib.dataset.stats import Stats
 from lib.visu import draw_boxes, draw_velocities
@@ -26,8 +26,8 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
             RandomFlip(directions=["x", "y"]),
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
-            #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000, return_scale=True),
-            #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920, return_scale=True),
+            #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000),
+            #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920),
         ])
 
     def __len__(self):
@@ -50,13 +50,6 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
         # swap motion vector axes so that shape is (B, C, H, W) instead of (B, H, W, C)
         sample["motion_vectors"] = sample["motion_vectors"].permute(0, 3, 1, 2)
 
-        batch_size = sample["motion_vectors"].shape[0]
-        try:
-            sample["scaling_factor"] = torch.tensor(sample["scaling_factor"])
-            sample["scaling_factor"] = sample["scaling_factor"].repeat(batch_size).view(-1, 1)
-        except KeyError:
-            sample["scaling_factor"] = torch.ones(size=(batch_size, 1))
-
         return sample
 
 
@@ -72,6 +65,11 @@ if __name__ == "__main__":
 
         step_wise = True
 
+        batch_size = datasets[mode][0]["motion_vectors"].shape[0]
+        for batch_idx in range(batch_size):
+            cv2.namedWindow("motion_vectors-{}".format(batch_idx), cv2.WINDOW_NORMAL)
+            cv2.resizeWindow("motion_vectors-{}".format(batch_idx), 640, 360)
+
         for step, sample in enumerate(dataloaders[mode]):
 
             # remove batch dimension as batch size is always 1
@@ -82,7 +80,6 @@ if __name__ == "__main__":
             boxes_prev = sample["boxes_prev"]
             velocities = sample["velocities"]
             num_boxes_mask = sample["num_boxes_mask"]
-            scaling_factor = sample["scaling_factor"]
             det_boxes_prev = sample["det_boxes_prev"]
 
             print("Step: {}".format(step))
@@ -95,8 +92,6 @@ if __name__ == "__main__":
             print(velocities.shape)
             print(num_boxes_mask.shape)
             print(det_boxes_prev.shape)
-            print(scaling_factor.shape)
-            print(scaling_factor)
 
             for batch_idx in range(motion_vectors.shape[0]):
 
@@ -110,9 +105,9 @@ if __name__ == "__main__":
                 motion_vectors_ = motion_vectors_[..., [2, 1, 0]]
                 motion_vectors_ = motion_vectors_.numpy()
                 motion_vectors_ = (motion_vectors_ - np.min(motion_vectors_)) / (np.max(motion_vectors_) - np.min(motion_vectors_))
-                motion_vectors_ = draw_boxes(motion_vectors_, boxes_prev_[:, 1:]*scaling_factor[0, 0], None, color=(200, 200, 200))
-                motion_vectors_ = draw_boxes(motion_vectors_, det_boxes_prev_[:, 1:]*scaling_factor[0, 0], None, color=(50, 255, 50))
-                motion_vectors_ = draw_velocities(motion_vectors_, boxes_prev_[:, 1:]*scaling_factor[0, 0], velocities_, scale=100)
+                motion_vectors_ = draw_boxes(motion_vectors_, boxes_prev_[:, 1:], None, color=(200, 200, 200))
+                motion_vectors_ = draw_boxes(motion_vectors_, det_boxes_prev_[:, 1:], None, color=(50, 255, 50))
+                motion_vectors_ = draw_velocities(motion_vectors_, boxes_prev_[:, 1:], velocities_, scale=100)
 
                 print("step: {}, MVS shape: {}".format(step, motion_vectors_.shape))
                 cv2.imshow("motion_vectors-{}".format(batch_idx), motion_vectors_)

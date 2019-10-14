@@ -1,27 +1,32 @@
 import cv2
 import numpy as np
+import torch
 
 from lib.visu import draw_boxes
 from lib.dataset.velocities import box_from_velocities
 from lib.dataset.stats import Stats
-from lib.transforms.transforms import standardize_velocities
+from lib.transforms.transforms import StandardizeVelocities
 
 
 class Visualizer:
     def __init__(self):
         self.stats = Stats()
+        self.standardize_velocities = StandardizeVelocities(
+            mean=self.stats.velocities["mean"],
+            std=self.stats.velocities["std"],
+            inverse=True)
+        cv2.namedWindow("motion_vectors", cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("motion_vectors", 640, 360)
 
-    def save_inputs(self, motion_vectors, boxes_prev,  motion_vector_scale, velocities):
+    def save_inputs(self, motion_vectors, boxes_prev, velocities):
         motion_vectors = motion_vectors.detach().cpu()
         boxes_prev = boxes_prev.detach().cpu()
-        motion_vector_scale = motion_vector_scale.detach().cpu()
         velocities = velocities.detach().cpu()
 
         # undo the standardization of velocities prior to computing and plotting
         # boxes from it
-        velocities = standardize_velocities(velocities,
-            mean=self.stats.velocities["mean"],
-            std=self.stats.velocities["std"], inverse=True)
+        sample = self.standardize_velocities({"velocities": velocities})
+        velocities = sample["velocities"]
 
         self.batch_size = motion_vectors.shape[0]
 
@@ -45,35 +50,33 @@ class Visualizer:
         self.motion_vectors = motion_vectors
         self.boxes = boxes
         self.boxes_prev = boxes_prev
-        self.motion_vector_scale = motion_vector_scale
         self.batch_idx = batch_idx
 
 
-    def save_outputs(self, velocities_pred):
+    def save_outputs(self, velocities_pred, num_boxes_mask):
         velocities_pred = velocities_pred.detach().cpu()
-        velocities_pred = velocities_pred.view(self.batch_size, -1, 4)
+        # add padding back to allow for reshaping into [batch_size, pad_num_boxes, 4]
+        batch_size = num_boxes_mask.shape[0]
+        pad_num_boxes = num_boxes_mask.shape[1]
+        velocities_pred_padded = torch.zeros(batch_size, pad_num_boxes, 4).float()
+        for batch_idx in range(batch_size):
+            num_boxes = torch.sum(num_boxes_mask[batch_idx, ...])
+            velocities_pred_padded[batch_idx, :num_boxes, :] = velocities_pred[batch_idx, ...].view(-1, 4)
+        velocities_pred = velocities_pred_padded
         velocities_pred = velocities_pred[self.batch_idx, ...]
         # undo the standardization
-        velocities_pred = standardize_velocities(velocities_pred,
-            mean=self.stats.velocities["mean"],
-            std=self.stats.velocities["std"], inverse=True)
+        sample = self.standardize_velocities({"velocities": velocities_pred})
+        velocities_pred = sample["velocities"]
         # compute boxes from predicted velocities
         self.boxes_pred = box_from_velocities(self.boxes_prev, velocities_pred)
 
 
     def show(self):
-
         # show previous boxes
-        boxes_prev_scaled = self.boxes_prev * self.motion_vector_scale[0, 0]
-        self.motion_vectors = draw_boxes(self.motion_vectors, boxes_prev_scaled.numpy(), None, color=(200, 200, 200))
-
+        self.motion_vectors = draw_boxes(self.motion_vectors, self.boxes_prev.numpy(), None, color=(200, 200, 200))
         # show gt boxes
-        boxes_scaled = self.boxes * self.motion_vector_scale[0, 0]
-        self.motion_vectors = draw_boxes(self.motion_vectors, boxes_scaled.numpy(), None, color=(255, 0, 0))
-
+        self.motion_vectors = draw_boxes(self.motion_vectors, self.boxes.numpy(), None, color=(255, 0, 0))
         # show predicted boxes
-        boxes_pred_scaled = self.boxes_pred * self.motion_vector_scale[0, 0]
-        self.motion_vectors = draw_boxes(self.motion_vectors, boxes_pred_scaled.numpy(), None, color=(255, 255, 0))
-
+        self.motion_vectors = draw_boxes(self.motion_vectors, self.boxes_pred.numpy(), None, color=(255, 255, 0))
         cv2.imshow("motion_vectors", self.motion_vectors)
         key = cv2.waitKey(1)
