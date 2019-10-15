@@ -1,1 +1,7 @@
-python3 compute_metrics.py data/MOT17/train eval_output
+1) Set hyper parameters in `eval.py` and run this script
+2) Output is generated in the `eval_output` directory in a sub directory which is specififed by the hyper parameters
+3) Run the `schedule_compute_metrics.py` script to automatically compute MOt metrics for all newly added sub directories in `eval_output`
+4) The output will be written in the `mot_metrics.log` file in each sub directory
+
+To compute MOT metrics for a single example, run (for example)
+python compute_metrics.py data/MOT17/train eval_output/train/mpeg4/deep/iou-thres-0.1/det-interval-10
