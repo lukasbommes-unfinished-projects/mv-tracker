@@ -16,7 +16,7 @@ Notes: Added additional instrumentation for weight to update ration and
 ################################################
 
 
-13_10_2019_01.pth
+13_10_2019_02.pth
 
 batch size: 16
 epochs_trained: 150

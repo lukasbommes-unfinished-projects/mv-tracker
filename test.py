@@ -29,10 +29,8 @@ if __name__ == "__main__":
                         gpu=0)
 
     tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=Config.TRACKER_IOU_THRES)
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     tracker_deep = MotionVectorTrackerDeep(iou_threshold=Config.TRACKER_IOU_THRES,
-        device=device, weights_file=Config.TRACKER_WEIGHTS_FILE)
+        weights_file=Config.TRACKER_WEIGHTS_FILE)
 
     cap = VideoCap()
 

@@ -20,25 +20,16 @@ if __name__ == "__main__":
     benchmark = "MOT17"  # either "MOT17" or "MOT16"
     codec = "mpeg4"
     eval_detectors = ["FRCNN", "SDP", "DPM"]  # which detections to use, can contain "FRCNN", "SDP", "DPM"
-    eval_datasets = ["train"]  # which datasets to use, can contain "train" and "test"
-    tracker_type = "baseline"  # which tracker(s) to evaluate, can be "baseline", "deep"
-    deep_tracker_weights_file = "models/tracker/12_10_2019_03.pth"
+    mode = "train"  # which datasets to use, "train" or "test"
+    tracker_type = "deep"  # which tracker(s) to evaluate, "baseline" or "deep"
+    deep_tracker_weights_file = "models/tracker/14_10_2019_01.pth"
     detector_interval = 10
-    tracker_iou_thres = 0.05
+    tracker_iou_thres = 0.1
 
-    train_dirs = sorted(glob.glob(os.path.join(root_dir, benchmark, "train/*")))
-    test_dirs = sorted(glob.glob(os.path.join(root_dir, benchmark, "test/*")))
-    data_dirs = []
-    if "test" in eval_datasets:
-        data_dirs += test_dirs
-    if "train" in eval_datasets:
-        data_dirs += train_dirs
+    data_dirs = sorted(glob.glob(os.path.join(root_dir, benchmark, "{}/*".format(mode))))
 
-    print(data_dirs)
-
-    output_directory = os.path.join('eval_output', benchmark, codec, tracker_type, "iou-thres-{}".format(tracker_iou_thres), "det-interval-{}".format(detector_interval))
+    output_directory = os.path.join('eval_output', benchmark, mode, codec, tracker_type, "iou-thres-{}".format(tracker_iou_thres), "det-interval-{}".format(detector_interval))
     os.makedirs(output_directory)
-    # HINT: When changing the params in a loop put a continue statement for the case the folder exist already
 
     print("Created output directory {}".format(output_directory))
 
@@ -81,9 +72,8 @@ if __name__ == "__main__":
             tracker = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres)
 
         elif tracker_type == "deep":
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             tracker = MotionVectorTrackerDeep(iou_threshold=tracker_iou_thres,
-                device=device, weights_file=deep_tracker_weights_file)
+                weights_file=deep_tracker_weights_file)
 
         print("Computing {} metrics for sequence {}".format(benchmark, sequence_name))
 
@@ -151,10 +141,10 @@ if __name__ == "__main__":
             "update mean dt", "update std dt", "total mean dt", "total std dt"])
         for sequence_name, subdict in dts.items():
             if sequence_name != "accumulated":
-            csv_writer.writerow([sequence_name, np.mean(subdict["predict"]),
-                np.std(subdict["predict"]), np.mean(subdict["update"]),
-                np.std(subdict["update"]), np.mean(subdict["total"]),
-                np.std(subdict["total"])])
+                csv_writer.writerow([sequence_name, np.mean(subdict["predict"]),
+                    np.std(subdict["predict"]), np.mean(subdict["update"]),
+                    np.std(subdict["update"]), np.mean(subdict["total"]),
+                    np.std(subdict["total"])])
 
         # compute average over entire dataset
         csv_writer.writerow(["Dataset averages:",'','','','','',''])

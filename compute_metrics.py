@@ -92,5 +92,11 @@ if __name__ == '__main__':
     logging.info('Running metrics')
 
     summary = mh.compute_many(accs, names=names, metrics=mm.metrics.motchallenge_metrics, generate_overall=True)
-    print(mm.io.render_summary(summary, formatters=mh.formatters, namemap=mm.io.motchallenge_metric_names))
+    str_summary = mm.io.render_summary(summary, formatters=mh.formatters, namemap=mm.io.motchallenge_metric_names)
+    print(str_summary)
+
+    # print to file
+    with open(os.path.join(args.tests, "mot_metrics.txt"), mode="w") as text_file:
+        print(str_summary, file=text_file)
+
     logging.info('Completed')

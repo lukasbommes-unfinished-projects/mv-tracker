@@ -21,9 +21,9 @@ from lib.transforms.transforms import StandardizeMotionVectors, StandardizeVeloc
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, device, weights_file):
+    def __init__(self, iou_threshold, weights_file):
         self.iou_threshold = iou_threshold
-        self.device = device
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
