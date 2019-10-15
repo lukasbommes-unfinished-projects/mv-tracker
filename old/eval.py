@@ -1,8 +1,34 @@
+"""Compute predicted bounding boxes for any tracker and hyper parameter settings.
+
+This script runs any of the specified trackers with the specified hyper
+parameters and writes the predictions into output csv files which can later be
+used as input to the `compute_metrics.py` script. Additionally, the frame rate
+of the trackers is measured and stored into the `time_perf.log` file.
+
+The output directory is called `eval_output` and has the following structure
+
+eval_output/<benchmark>/<mode>/<codec>/<tracker_type>/<x>/<tracker_iou_thres>/<detector_interval>
+
+In case of the baseline tracker `x` in the above path is ommited. For the deep
+trackers, this is the weights file used in the evaluation. The other parameters
+have the followng meaning:
+
+- benchmark: Either "MOT16" or "MOT17". Determines which detections are loaded.
+- mode: Either "train" or "test". Whether to compute metrics on train or test
+    split of MOT data.
+- codec: Either "mpeg4" or "h264" determines the encoding type of the video.
+- tracker_type: Specifies the tracker model used, e.g. "baseline" or "deep"
+- tracker_iou_thres: The minimum IoU needed to match a tracked boy with a
+    detected box during data assocation step.
+- detector_interval: The interval in which the detector is run, e.g. 10 means
+    the detector is run on every 10th frame.
+"""
+
+
 import os
 import glob
 import csv
 import time
-import argparse
 import numpy as np
 from tqdm import tqdm
 import motmetrics as mm
@@ -15,55 +41,30 @@ from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="""
-Compute predicted bounding boxes for any tracker and hyper parameter settings.
-
-This script runs any of the specified trackers with the specified hyper
-parameters and writes the predictions into output csv files which can later be
-used as input to the `compute_metrics.py` script. Additionally, the frame rate
-of the trackers is measured and stored into the `time_perf.log` file.
-
-The output directory is called `eval_output` and has the following structure
-
-eval_output/<benchmark>/<mode>/<codec>/<tracker_type>/<x>/<tracker_iou_thres>/<detector_interval>
-
-In case of the baseline tracker `x` in the above path is ommited. For the deep
-trackers, this is the weights file used in the evaluation.
-
-Example usage:
-python eval.py MOT17 train mpeg4 deep 0.1 4 --deep_tracker_weights_file=models/tracker/14_10_2019_01.pth --root_dir=data
-""", formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('benchmark', type=str, help='Either "MOT16" or "MOT17". Determines which detections are loaded.', default='MOT17')
-    parser.add_argument('mode', type=str, help='Either "train" or "test". Whether to compute metrics on train or test split of MOT data.', default='train')
-    parser.add_argument('codec', type=str, help='Either "mpeg4" or "h264" determines the encoding type of the video.', default='mpeg4')
-    parser.add_argument('tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
-    parser.add_argument('tracker_iou_thres', type=float, help='The minimum IoU needed to match a tracked boy with a detected box during data assocation step.', default=0.1)
-    parser.add_argument('detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
-    parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
-    parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
 
-    args = parse_args()
-
+    root_dir = "data"
+    benchmark = "MOT17"  # either "MOT17" or "MOT16"
+    codec = "mpeg4"
     eval_detectors = ["FRCNN", "SDP", "DPM"]  # which detections to use, can contain "FRCNN", "SDP", "DPM"
+    mode = "train"  # which datasets to use, "train" or "test"
+    tracker_type = "deep"  # which tracker(s) to evaluate, "baseline" or "deep"
+    deep_tracker_weights_file = "models/tracker/14_10_2019_01.pth"
+    detector_interval = 5
+    tracker_iou_thres = 0.1
 
-    data_dirs = sorted(glob.glob(os.path.join(args.root_dir, args.benchmark, "{}/*".format(args.mode))))
+    data_dirs = sorted(glob.glob(os.path.join(root_dir, benchmark, "{}/*".format(mode))))
 
-    if args.tracker_type == "baseline":
-        output_directory = os.path.join('eval_output', args.benchmark, args.mode, args.codec,
-            args.tracker_type, "iou-thres-{}".format(args.tracker_iou_thres),
-            "det-interval-{}".format(args.detector_interval))
-    elif args.tracker_type == "deep":
-        weights_file_name = str.split(args.deep_tracker_weights_file, "/")[-1][:-4]  # remove ".pth"
-        output_directory = os.path.join('eval_output', args.benchmark, args.mode, args.codec,
-            args.tracker_type, weights_file_name,
-            "iou-thres-{}".format(args.tracker_iou_thres),
-            "det-interval-{}".format(args.detector_interval))
+    if tracker_type == "baseline":
+        output_directory = os.path.join('eval_output', benchmark, mode, codec,
+            tracker_type, "iou-thres-{}".format(tracker_iou_thres),
+            "det-interval-{}".format(detector_interval))
+    elif tracker_type == "deep":
+        weights_file_name = str.split(deep_tracker_weights_file, "/")[-1][:-4]  # remove ".pth"
+        output_directory = os.path.join('eval_output', benchmark, mode, codec,
+            tracker_type, weights_file_name,
+            "iou-thres-{}".format(tracker_iou_thres),
+            "det-interval-{}".format(detector_interval))
 
     os.makedirs(output_directory)
 
@@ -89,29 +90,29 @@ if __name__ == "__main__":
 
         print("Loading annotation data from", data_dir)
 
-        if args.benchmark == "MOT17":
+        if benchmark == "MOT17":
             if detector_name not in eval_detectors:
                 continue
 
             # get the video file from FRCNN sub directory
             sequence_name_without_detector = '-'.join(sequence_name.split('-')[:-1])
             sequence_name_frcnn = "{}-FRCNN".format(sequence_name_without_detector)
-            video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}.mp4".format(sequence_name_frcnn, args.codec))
+            video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}.mp4".format(sequence_name_frcnn, codec))
 
         else:
-            video_file = os.path.join(data_dir, "{}-{}.mp4".format(sequence_name, args.codec))
+            video_file = os.path.join(data_dir, "{}-{}.mp4".format(sequence_name, codec))
 
         print("Loading video file from", video_file)
 
         # init tracker
-        if args.tracker_type == "baseline":
-            tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres)
+        if tracker_type == "baseline":
+            tracker = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres)
 
-        elif args.tracker_type == "deep":
-            tracker = MotionVectorTrackerDeep(iou_threshold=args.tracker_iou_thres,
-                weights_file=args.deep_tracker_weights_file)
+        elif tracker_type == "deep":
+            tracker = MotionVectorTrackerDeep(iou_threshold=tracker_iou_thres,
+                weights_file=deep_tracker_weights_file)
 
-        print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
+        print("Computing {} metrics for sequence {}".format(benchmark, sequence_name))
 
         cap = VideoCap()
         ret = cap.open(video_file)
@@ -133,11 +134,11 @@ if __name__ == "__main__":
                 t_start_total = time.perf_counter()
 
                 # update with detections
-                if frame_idx % args.detector_interval == 0:
+                if frame_idx % detector_interval == 0:
                     t_start_update = time.perf_counter()
-                    if args.tracker_type == "baseline":
+                    if tracker_type == "baseline":
                         tracker.update(motion_vectors, frame_type, detections[frame_idx])
-                    elif args.tracker_type == "deep":
+                    elif tracker_type == "deep":
                         tracker.update(motion_vectors, frame_type, detections[frame_idx], frame.shape)
                     dts[sequence_name]["update"].append(time.perf_counter() - t_start_update)
 
@@ -145,9 +146,9 @@ if __name__ == "__main__":
                 # prediction by tracker
                 else:
                     t_start_predict = time.perf_counter()
-                    if args.tracker_type == "baseline":
+                    if tracker_type == "baseline":
                         tracker.predict(motion_vectors, frame_type)
-                    elif args.tracker_type == "deep":
+                    elif tracker_type == "deep":
                         tracker.predict(motion_vectors, frame_type, frame.shape)
                     dts[sequence_name]["predict"].append(time.perf_counter() - t_start_predict)
 
