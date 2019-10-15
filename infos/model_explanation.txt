@@ -1,0 +1,126 @@
+14_10_2019_01.pth
+
+batch size: 16
+epochs_trained: 80
+initial learning rate: 1e-4
+scheduler: every 10 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"])
+tensorboard_id: Oct14_08-17-23_de2d11b5ab38
+
+Notes: Added additional instrumentation for weight to update ration and
+       mean IoU. Loss curve should be similar to 12_10_2019_03.pth.
+       Also added num_boxes_mask to only consider actual boxes and not the
+       padding.
+
+
+################################################
+
+
+13_10_2019_01.pth
+
+batch size: 16
+epochs_trained: 150
+initial learning rate: 1e-4
+scheduler: every 30 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"])
+tensorboard_id: Oct13_03-57-17_de2d11b5ab38
+
+
+################################################
+
+12_10_2019_03.pth
+
+batch size: 16
+epochs_trained: 80
+initial learning rate: 1e-4
+scheduler: every 10 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"])
+tensorboard_id: Oct12_12-27-39_de2d11b5ab38
+
+
+12_10_2019_02.pth
+
+batch size: 16
+epochs_trained: 80
+initial learning rate: 1e-4
+scheduler: every 10 epochs reduction by factor 10
+augmentation: random_scale([300, 400, 500, 600, 700, 800, 900], maxsize=1920), random_flip(["x", "y"])
+tensorboard_id: Oct12_08-24-15_de2d11b5ab38
+
+
+################################################
+
+12_10_2019_90epochs.pth
+
+batch size: 32
+epochs_trained: 90
+initial learning rate: 1e-4
+scheduler: every 10 epochs reduction by factor 10
+augmentation: random_scale([300, 400, 500, 600], maxsize=1000), random_flip(["x", "y"])
+tensorboard_id: Oct11_17-00-08_de2d11b5ab38
+
+
+11_10_2019_148epochs.pth
+
+batch size: 16
+epochs_trained: 148
+initial learning rate: 1e-4
+scheduler: every 10 epochs reduction by factor 10
+augmentation: random_scale([300, 400, 500, 600], maxsize=1000), random_flip(["x", "y"])
+tensorboard_id: Oct11_13-20-34_de2d11b5ab38
+
+
+11_10_2019_36epochs.pth
+
+batch size: 4
+epochs_trained: 36
+initial learning rate: 1e-4
+scheduler: every 10 epochs reduction by factor 10
+augmentation: random_scale([300, 400, 500, 600], maxsize=1000), random_flip(["x", "y"])
+tensorboard_id: Oct11_12-04-26_de2d11b5ab38
+
+
+11_10_2019_90epochs_diverged.pth
+
+batch size: 4
+epochs_trained: 90
+initial learning rate: 1e-4
+scheduler: no
+augmentation: random_scale([300, 400, 500, 600], maxsize=1000), random_flip(["x", "y"])
+tensorboard_id: Oct11_09-41-58_de2d11b5ab38
+
+
+################################################
+
+.pth
+
+batch size: 32
+epochs_trained:
+initial learning rate: 1e-4
+scheduler: no
+augmentation: no
+tensorboard_id:
+
+
+09_10_2019.pth
+
+batch size: 8 (?)
+epochs_trained:
+initial learning rate: 1e-4
+scheduler: no
+augmentation: no
+tensorboard_id:
+
+
+
+###############################################
+Empirical Results:
+- Batch size 4:
+- Batch Size 16: is a good compromise, batch size 32 leads to
+- Batch size 32:
+
+Data augmentation:
+- no augmentation makes the network memorize the train data, train loss decreases rapidlz, but validation loss stays high -> overfitting occurs
+- random flipping: increases generalization performance of the network
+- random flipping + random scaling: prevents overfitting, but leads to low final validation and training accuracy
+-random scaling alone:

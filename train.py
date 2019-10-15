@@ -27,6 +27,7 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
     best_model_wts = copy.deepcopy(model.state_dict())
     torch.save(best_model_wts, "models/tracker/best_model.pth")
     best_loss = 99999.0
+    best_mean_iou = 0.0
     iterations = {"train": 0, "val": 0}
 
     for epoch in range(num_epochs):
@@ -126,10 +127,15 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
             writer.add_scalar('Epoch Loss/{}'.format(phase), epoch_loss, epoch)
             writer.add_scalar('Epoch Mean IoU/{}'.format(phase), epoch_mean_iou, epoch)
 
-            if phase == "val" and epoch_loss < best_loss:
+            if phase == "val" and epoch_loss =< best_loss:
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
-                torch.save(best_model_wts, "models/tracker/best_model.pth")
+                torch.save(best_model_wts, "models/tracker/model_lowest_loss.pth")
+
+            if phase == "val" and epoch_mean_iou >= best_mean_iou:
+                best_mean_iou = epoch_mean_iou
+                best_model_wts = copy.deepcopy(model.state_dict())
+                torch.save(best_model_wts, "models/tracker/model_highest_iou.pth")
 
             #if phase == "val" and scheduler:
             #    scheduler.step(epoch_loss)

@@ -49,7 +49,7 @@ class MotionVectorTracker:
         self.model.eval()
 
 
-    def update(self, motion_vectors, frame_shape, frame_type, detection_boxes):
+    def update(self, motion_vectors, frame_type, detection_boxes, frame_shape):
 
         # bring boxes into next state
         self.predict(motion_vectors, frame_shape, frame_type)
@@ -80,7 +80,7 @@ class MotionVectorTracker:
             self.box_ids.pop(t)
 
 
-    def predict(self, motion_vectors, frame_shape, frame_type):
+    def predict(self, motion_vectors, frame_type, frame_shape):
 
         # if there are no boxes skip prediction step
         if np.shape(self.boxes)[0] == 0:
@@ -108,11 +108,6 @@ class MotionVectorTracker:
 
             self.last_motion_vectors = motion_vectors
 
-        print("###")
-        print(motion_vectors.shape)
-        print(self.last_motion_vectors.shape)
-        print(self.boxes)
-
         # pre process boxes
         boxes_prev = np.copy(self.boxes)
         boxes_prev = torch.from_numpy(boxes_prev)
@@ -122,7 +117,6 @@ class MotionVectorTracker:
         boxes_prev_tmp[:, 1:5] = boxes_prev
         boxes_prev = boxes_prev_tmp
         boxes_prev = boxes_prev.unsqueeze(0)  # add batch dimension
-        print("boxes_prev.shape in beginning", boxes_prev.shape)
 
         # feed into model, retrieve output
         with torch.set_grad_enabled(False):
@@ -141,14 +135,14 @@ class MotionVectorTracker:
             velocities_pred = sample["velocities"]
 
         # compute boxes from predicted velocities
-        print("boxes_prev.shape before box_from_velocities:", boxes_prev.shape)
         boxes_prev = boxes_prev[0, ...]
         boxes_prev = boxes_prev[..., 1:5]
         self.boxes = box_from_velocities(boxes_prev, velocities_pred).numpy()
-        print(self.boxes)
+
 
     def get_boxes(self):
         return self.boxes
+
 
     def get_box_ids(self):
         return self.box_ids

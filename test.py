@@ -81,7 +81,7 @@ if __name__ == "__main__":
             detections = detector.detect(frame)
             det_boxes = detections['detection_boxes']
             tracker_baseline.update(motion_vectors, frame_type, det_boxes)
-            tracker_deep.update(motion_vectors, frame.shape, frame_type, det_boxes)
+            tracker_deep.update(motion_vectors, frame_type, det_boxes, frame.shape)
             if prev_boxes_baseline is not None:
                frame = draw_boxes(frame, prev_boxes_baseline, color=color_previous_baseline)
             prev_boxes_baseline = np.copy(det_boxes)
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             tracker_baseline.predict(motion_vectors, frame_type)
             track_boxes_baseline = tracker_baseline.get_boxes()
 
-            tracker_deep.predict(motion_vectors, frame.shape, frame_type)
+            tracker_deep.predict(motion_vectors, frame_type, frame.shape)
             track_boxes_deep = tracker_deep.get_boxes()
 
             if prev_boxes_baseline is not None:
