@@ -52,7 +52,7 @@ class MotionVectorTracker:
     def update(self, motion_vectors, frame_type, detection_boxes, frame_shape):
 
         # bring boxes into next state
-        self.predict(motion_vectors, frame_shape, frame_type)
+        self.predict(motion_vectors, frame_type, frame_shape)
 
         # match predicted (tracked) boxes with detected boxes
         matches, unmatched_trackers, unmatched_detectors = trackerlib.match_bounding_boxes(self.boxes, detection_boxes, self.iou_threshold)

@@ -1,6 +1,7 @@
 import os
 import glob
 import csv
+import time
 import numpy as np
 from tqdm import tqdm
 import motmetrics as mm
@@ -19,14 +20,11 @@ if __name__ == "__main__":
     benchmark = "MOT17"  # either "MOT17" or "MOT16"
     codec = "mpeg4"
     eval_detectors = ["FRCNN", "SDP", "DPM"]  # which detections to use, can contain "FRCNN", "SDP", "DPM"
-    eval_datasets = ["test", "train"]  # which datasets to use, can contain "train" and "test"
+    eval_datasets = ["train"]  # which datasets to use, can contain "train" and "test"
     tracker_type = "baseline"  # which tracker(s) to evaluate, can be "baseline", "deep"
     deep_tracker_weights_file = "models/tracker/12_10_2019_03.pth"
-    detector_interval = 5
-    tracker_iou_thres = 0.1
-
-    print("Evaluating datasets: {}".format(eval_datasets))
-    print("Evaluating with detections: {}".format(eval_detectors))
+    detector_interval = 10
+    tracker_iou_thres = 0.05
 
     train_dirs = sorted(glob.glob(os.path.join(root_dir, benchmark, "train/*")))
     test_dirs = sorted(glob.glob(os.path.join(root_dir, benchmark, "test/*")))
@@ -38,12 +36,29 @@ if __name__ == "__main__":
 
     print(data_dirs)
 
+    output_directory = os.path.join('eval_output', benchmark, codec, tracker_type, "iou-thres-{}".format(tracker_iou_thres), "det-interval-{}".format(detector_interval))
+    os.makedirs(output_directory)
+    # HINT: When changing the params in a loop put a continue statement for the case the folder exist already
+
+    print("Created output directory {}".format(output_directory))
+
+    dts = {}
     for data_dir in data_dirs:
         num_frames = len(glob.glob(os.path.join(data_dir, 'img1/*.jpg')))
         detections = load_detections(os.path.join(data_dir, 'det/det.txt'), num_frames)
         sequence_name = data_dir.split('/')[-1]
         sequence_path = '/'.join(data_dir.split('/')[:-1])
         detector_name = sequence_name.split('-')[-1]
+        dts[sequence_name] = {
+            "update": [],
+            "predict": [],
+            "total": []
+        }
+        dts["accumulated"] = {
+            "update": [],
+            "predict": [],
+            "total": []
+        }
 
         print("Loading annotation data from", data_dir)
 
@@ -79,7 +94,7 @@ if __name__ == "__main__":
 
         frame_idx = 0
 
-        with open(os.path.join('eval_output', benchmark, '{}.txt'.format(sequence_name)), mode="w") as csvfile:
+        with open(os.path.join(output_directory, '{}.txt'.format(sequence_name)), mode="w") as csvfile:
 
             csv_writer = csv.writer(csvfile, delimiter=',')
 
@@ -89,19 +104,28 @@ if __name__ == "__main__":
                 if not ret:
                     break
 
+                t_start_total = time.perf_counter()
+
                 # update with detections
                 if frame_idx % detector_interval == 0:
+                    t_start_update = time.perf_counter()
                     if tracker_type == "baseline":
                         tracker.update(motion_vectors, frame_type, detections[frame_idx])
                     elif tracker_type == "deep":
                         tracker.update(motion_vectors, frame_type, detections[frame_idx], frame.shape)
+                    dts[sequence_name]["update"].append(time.perf_counter() - t_start_update)
+
 
                 # prediction by tracker
                 else:
+                    t_start_predict = time.perf_counter()
                     if tracker_type == "baseline":
                         tracker.predict(motion_vectors, frame_type)
                     elif tracker_type == "deep":
                         tracker.predict(motion_vectors, frame_type, frame.shape)
+                    dts[sequence_name]["predict"].append(time.perf_counter() - t_start_predict)
+
+                dts[sequence_name]["total"].append(time.perf_counter() - t_start_total)
 
                 track_boxes = tracker.get_boxes()
                 track_ids = tracker.get_box_ids()
@@ -113,5 +137,36 @@ if __name__ == "__main__":
                 frame_idx += 1
                 pbar.update(1)
 
+        dts["accumulated"]["update"].extend(dts[sequence_name]["update"])
+        dts["accumulated"]["predict"].extend(dts[sequence_name]["predict"])
+        dts["accumulated"]["total"].extend(dts[sequence_name]["total"])
+
         cap.release()
         pbar.close()
+
+    # write frame rate output file
+    with open(os.path.join(output_directory, 'time_perf.txt'), mode="w") as csvfile:
+        csv_writer = csv.writer(csvfile, delimiter=',')
+        csv_writer.writerow(["sequence", "predict mean dt", "predict std dt",
+            "update mean dt", "update std dt", "total mean dt", "total std dt"])
+        for sequence_name, subdict in dts.items():
+            if sequence_name != "accumulated":
+            csv_writer.writerow([sequence_name, np.mean(subdict["predict"]),
+                np.std(subdict["predict"]), np.mean(subdict["update"]),
+                np.std(subdict["update"]), np.mean(subdict["total"]),
+                np.std(subdict["total"])])
+
+        # compute average over entire dataset
+        csv_writer.writerow(["Dataset averages:",'','','','','',''])
+        csv_writer.writerow(["predict mean dt", "predict std dt", "update mean dt",
+            "update std dt", "total mean dt", "total std dt", ""])
+        csv_writer.writerow([np.mean(dts["accumulated"]["predict"]),
+            np.std(dts["accumulated"]["predict"]),
+            np.mean(dts["accumulated"]["update"]),
+            np.std(dts["accumulated"]["update"]),
+            np.mean(dts["accumulated"]["total"]),
+            np.std(dts["accumulated"]["total"]), ""])
+        csv_writer.writerow(["predict mean fps",'update mean fps','total mean fps','','','',''])
+        csv_writer.writerow([1/np.mean(dts["accumulated"]["predict"]),
+            1/np.mean(dts["accumulated"]["update"]),
+            1/np.mean(dts["accumulated"]["total"]),'','','',''])
