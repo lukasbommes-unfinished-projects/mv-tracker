@@ -375,3 +375,24 @@ class RandomFlip:
             if random.choice([True, False]):  # 50 percent chance that flip happens
                 flip_(sample, sample_transformed, direction=direction)
         return sample_transformed
+
+
+class RandomMotionChange:
+    """Randomly modifies the color channels of the motion vector image.
+
+    Args:
+        random_x (`float`): A number in the range (-random_x, random_x) will be
+            added to the true x component of motion in each macroblock.
+
+        random_y (`float`): A number in the range (-random_y, random_y) will be
+            added to the true y component of motion in each macroblock.
+    """
+    def __init__(self, random_x=, random_y=):
+        
+
+    def __call__(self, sample):
+        sample_transformed = copy.deepcopy(sample)
+        for direction in self.directions:
+            if random.choice([True, False]):  # 50 percent chance that flip happens
+                flip_(sample, sample_transformed, direction=direction)
+        return sample_transformed

@@ -96,7 +96,7 @@ if __name__ == '__main__':
     print(str_summary)
 
     # print to file
-    with open(os.path.join(args.tests, "mot_metrics.txt"), mode="w") as text_file:
+    with open(os.path.join(args.tests, "mot_metrics.log"), mode="w") as text_file:
         print(str_summary, file=text_file)
 
     logging.info('Completed')

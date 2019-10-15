@@ -135,7 +135,7 @@ if __name__ == "__main__":
         pbar.close()
 
     # write frame rate output file
-    with open(os.path.join(output_directory, 'time_perf.txt'), mode="w") as csvfile:
+    with open(os.path.join(output_directory, 'time_perf.log'), mode="w") as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
         csv_writer.writerow(["sequence", "predict mean dt", "predict std dt",
             "update mean dt", "update std dt", "total mean dt", "total std dt"])
