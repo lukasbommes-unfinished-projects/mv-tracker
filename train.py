@@ -1,5 +1,6 @@
 import os
 import time
+import datetime
 import copy
 from tqdm import tqdm
 
@@ -24,8 +25,11 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
     if visu:
         visualizer = Visualizer()
 
-    best_model_wts = copy.deepcopy(model.state_dict())
-    torch.save(best_model_wts, "models/tracker/best_model.pth")
+    # create output directory
+    date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    outdir_name = os.path.join("models", "tracker", date)
+    os.makedirs(outdir_name, exist_ok=True)
+
     best_loss = 99999.0
     best_mean_iou = 0.0
     iterations = {"train": 0, "val": 0}
@@ -127,15 +131,15 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
             writer.add_scalar('Epoch Loss/{}'.format(phase), epoch_loss, epoch)
             writer.add_scalar('Epoch Mean IoU/{}'.format(phase), epoch_mean_iou, epoch)
 
-            if phase == "val" and epoch_loss =< best_loss:
+            if phase == "val" and epoch_loss <= best_loss:
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
-                torch.save(best_model_wts, "models/tracker/model_lowest_loss.pth")
+                torch.save(best_model_wts, os.path.join(outdir_name, "model_lowest_loss.pth"))
 
             if phase == "val" and epoch_mean_iou >= best_mean_iou:
                 best_mean_iou = epoch_mean_iou
                 best_model_wts = copy.deepcopy(model.state_dict())
-                torch.save(best_model_wts, "models/tracker/model_highest_iou.pth")
+                torch.save(best_model_wts, os.path.join(outdir_name, "model_highest_iou.pth"))
 
             #if phase == "val" and scheduler:
             #    scheduler.step(epoch_loss)
@@ -174,7 +178,7 @@ if __name__ == "__main__":
     criterion = nn.SmoothL1Loss(reduction='mean')
     #criterion = nn.MSELoss(reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.0005, amsgrad=False)  # weight_decay=0.0001
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
-    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=80, visu=False)
+    best_model = train(model, criterion, optimizer, scheduler=scheduler, num_epochs=160, visu=False)
