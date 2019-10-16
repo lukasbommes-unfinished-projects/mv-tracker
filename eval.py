@@ -4,6 +4,7 @@ import csv
 import time
 import argparse
 import numpy as np
+import torch
 from tqdm import tqdm
 import motmetrics as mm
 
@@ -65,7 +66,12 @@ if __name__ == "__main__":
             "iou-thres-{}".format(args.tracker_iou_thres),
             "det-interval-{}".format(args.detector_interval))
 
-    os.makedirs(output_directory)
+    # if output directory exists exit this process
+    try:
+        os.makedirs(output_directory)
+    except FileExistsError:
+        print("Output directory {} exists. Skipping.".format(output_directory))
+        exit()
 
     print("Created output directory {}".format(output_directory))
 
@@ -109,7 +115,7 @@ if __name__ == "__main__":
 
         elif args.tracker_type == "deep":
             tracker = MotionVectorTrackerDeep(iou_threshold=args.tracker_iou_thres,
-                weights_file=args.deep_tracker_weights_file)
+                weights_file=args.deep_tracker_weights_file, device=torch.device("cpu"))
 
         print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
 
@@ -130,28 +136,28 @@ if __name__ == "__main__":
                 if not ret:
                     break
 
-                t_start_total = time.perf_counter()
+                t_start_total = time.process_time()
 
                 # update with detections
                 if frame_idx % args.detector_interval == 0:
-                    t_start_update = time.perf_counter()
+                    t_start_update = time.process_time()
                     if args.tracker_type == "baseline":
                         tracker.update(motion_vectors, frame_type, detections[frame_idx])
                     elif args.tracker_type == "deep":
                         tracker.update(motion_vectors, frame_type, detections[frame_idx], frame.shape)
-                    dts[sequence_name]["update"].append(time.perf_counter() - t_start_update)
+                    dts[sequence_name]["update"].append(time.process_time() - t_start_update)
 
 
                 # prediction by tracker
                 else:
-                    t_start_predict = time.perf_counter()
+                    t_start_predict = time.process_time()
                     if args.tracker_type == "baseline":
                         tracker.predict(motion_vectors, frame_type)
                     elif args.tracker_type == "deep":
                         tracker.predict(motion_vectors, frame_type, frame.shape)
-                    dts[sequence_name]["predict"].append(time.perf_counter() - t_start_predict)
+                    dts[sequence_name]["predict"].append(time.process_time() - t_start_predict)
 
-                dts[sequence_name]["total"].append(time.perf_counter() - t_start_total)
+                dts[sequence_name]["total"].append(time.process_time() - t_start_total)
 
                 track_boxes = tracker.get_boxes()
                 track_ids = tracker.get_box_ids()
