@@ -2,7 +2,6 @@
 
 # put the commands that shall be scheduled here
 commands = [
-    #["python", "eval.py", "MOT17", "train", "mpeg4", "deep", "0.1", "4", "--deep_tracker_weights_file=models/tracker/14_10_2019_01.pth", "--root_dir=data"],
     ["python", "eval.py", "MOT17", "train", "mpeg4", "baseline", "0.1", "20", "--root_dir=data"],
     ["python", "eval.py", "MOT17", "train", "mpeg4", "baseline", "0.1", "15", "--root_dir=data"],
     ["python", "eval.py", "MOT17", "train", "mpeg4", "baseline", "0.1", "10", "--root_dir=data"],
@@ -104,7 +103,10 @@ def draw(stdscr):
                                 p["status"] = "finished"
                                 p["just_finished"] = False
                             stdscr.addnstr(i + 1 + scroll_offset, 0, str(p["process"].pid), 6)
-                            stdscr.addnstr(i + 1 + scroll_offset, 7, "FINISHED", 10)
+                            if retcode < 0:
+                                stdscr.addnstr(i + 1 + scroll_offset, 7, "FAILED ({})".format(retcode), 10)
+                            else:
+                                stdscr.addnstr(i + 1 + scroll_offset, 7, "FINISHED", 10)
                             stdscr.addnstr(i + 1 + scroll_offset, 19, str(p["dt"]), 15)
                             stdscr.addnstr(i + 1 + scroll_offset, 34, str(p["command"]), width-34)
                     else:
