@@ -6,7 +6,7 @@ import torch
 import torchvision
 
 from lib.transforms.transforms import StandardizeMotionVectors, \
-    StandardizeVelocities, ScaleImage, RandomScaleImage, RandomFlip
+    StandardizeVelocities, ScaleImage, RandomScaleImage, RandomFlip, RandomMotionChange
 from lib.dataset.stats import Stats
 from lib.visu import draw_boxes, draw_velocities
 
@@ -26,6 +26,7 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
             RandomFlip(directions=["x", "y"]),
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
+            RandomMotionChange(scale=1.0),
             #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000),
             #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920),
         ])
@@ -57,7 +58,7 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
 if __name__ == "__main__":
     import numpy as np
     root_dir = "data_precomputed"
-    modes = ["train", "val"]
+    modes = ["train"]
     datasets = {x: MotionVectorDatasetPrecomputed(root_dir=os.path.join(root_dir, x)) for x in modes}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1, shuffle=False, num_workers=0) for x in modes}
 

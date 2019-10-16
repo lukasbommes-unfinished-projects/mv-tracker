@@ -377,22 +377,37 @@ class RandomFlip:
         return sample_transformed
 
 
-# class RandomMotionChange:
-#     """Randomly modifies the color channels of the motion vector image.
-#
-#     Args:
-#         random_x (`float`): A number in the range (-random_x, random_x) will be
-#             added to the true x component of motion in each macroblock.
-#
-#         random_y (`float`): A number in the range (-random_y, random_y) will be
-#             added to the true y component of motion in each macroblock.
-#     """
-#     def __init__(self, random_x=, random_y=):
-#
-#
-#     def __call__(self, sample):
-#         sample_transformed = copy.deepcopy(sample)
-#         for direction in self.directions:
-#             if random.choice([True, False]):  # 50 percent chance that flip happens
-#                 flip_(sample, sample_transformed, direction=direction)
-#         return sample_transformed
+class RandomMotionChange:
+    """Randomly modifies the color channels of the motion vector image.
+
+    A random value is added to the x and y channel of the motion vector image.
+    The value for each channel is drawn from a normal distribution which has the
+    same mean as the corresponding motion vector channel and a standard
+    deviation which is the standard deviation of the motion vector channel times
+    the `scale` factor.
+
+    Mean and standard deviation of both the x and y channel of the motion vector
+    image are computed and a random value for each channel is sampled
+
+    Args:
+        scale (`float`): The scaling factor for the standard deviation of the
+            distribution from which color modifications are drawn. Must lie in
+            range (0, 1].
+    """
+    def __init__(self, scale=1.0):
+        self.scale = scale
+
+    def __call__(self, sample):
+        sample_transformed = copy.deepcopy(sample)
+        # sample statistics from motion vectors
+        mean_x = torch.mean(sample_transformed["motion_vectors"][..., 2])
+        std_x = torch.std(sample_transformed["motion_vectors"][..., 2])
+        mean_y = torch.mean(sample_transformed["motion_vectors"][..., 1])
+        std_y = torch.std(sample_transformed["motion_vectors"][..., 1])
+        # choose a random color change from a scaled version of that distribution
+        x_rand = float(np.random.normal(loc=mean_x, scale=std_x*self.scale))
+        y_rand = float(np.random.normal(loc=mean_y, scale=std_y*self.scale))
+        # apply color change to cx and y channel
+        sample_transformed["motion_vectors"][..., 2] += x_rand
+        sample_transformed["motion_vectors"][..., 1] += y_rand
+        return sample_transformed
