@@ -50,7 +50,7 @@ def log_weights(model, epoch, writer):
     for key in layers_keys:
         if is_parallel:
             key = "module.{}".format(key)
-        weights = state_dict[key].flatten().numpy()
+        weights = state_dict[key].detach().cpu().flatten().numpy()
         writer.add_histogram(key, weights, global_step=epoch, bins='tensorflow')
 
 
