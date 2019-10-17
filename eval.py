@@ -3,7 +3,6 @@ import glob
 import csv
 import time
 import argparse
-import pickle
 import numpy as np
 import torch
 from tqdm import tqdm

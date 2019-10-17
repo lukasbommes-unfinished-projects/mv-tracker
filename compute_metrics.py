@@ -8,6 +8,7 @@ import argparse
 import glob
 import os
 import logging
+import pickle
 import motmetrics as mm
 import pandas as pd
 from collections import OrderedDict

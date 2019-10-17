@@ -19,6 +19,41 @@ from lib.visualize_model import Visualizer
 
 torch.set_printoptions(precision=10)
 
+
+def log_weights(model, epoch, writer):
+    # names of layer weights (excludes batch norm layers, etc.)
+    layers_keys = [
+        'base.0.weight',
+        'base.4.0.conv1.weight',
+        'base.4.0.conv2.weight',
+        'base.4.2.conv1.weight',
+        'base.4.2.conv2.weight',
+        'base.6.0.conv1.weight',
+        'base.6.0.conv2.weight',
+        'base.6.0.downsample.0.weight',
+        'base.6.2.conv1.weight',
+        'base.6.2.conv2.weight',
+        'base.8.0.conv1.weight',
+        'base.8.0.conv2.weight',
+        'base.8.0.downsample.0.weight',
+        'base.8.2.conv1.weight',
+        'base.8.2.conv2.weight',
+        'base.10.0.conv1.weight',
+        'base.10.0.conv2.weight',
+        'base.10.0.downsample.0.weight',
+        'base.10.2.conv1.weight',
+        'base.10.2.conv2.weight',
+        'conv1x1.weight'
+    ]
+    state_dict = model.state_dict()
+    is_parallel = "module" in list(state_dict.keys())[0]
+    for key in layers_keys:
+        if is_parallel:
+            key = "module.{}".format(key)
+        weights = state_dict[key].flatten().numpy()
+        writer.add_histogram(key, weights, global_step=epoch, bins='tensorflow')
+
+
 def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
     tstart = time.time()
     writer = SummaryWriter()
@@ -106,11 +141,11 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
 
                     pbar.update()
 
-                # track loss
+                # log loss
                 running_loss.append(loss.item())
                 writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
 
-                # track mean IoU of all predicted and ground truth boxes
+                # log mean IoU of all predicted and ground truth boxes
                 boxes_prev = boxes_prev[num_boxes_mask].detach()
                 velocities_pred = velocities_pred.detach()
                 boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
@@ -146,6 +181,8 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False):
 
         if scheduler:
             scheduler.step()
+
+        log_weights(model, epoch, writer)
 
         print(velocities)
         print(velocities_pred)
