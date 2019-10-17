@@ -23,12 +23,12 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             "train": [
                 "MOT17/train/MOT17-02-FRCNN",  # static cam
                 "MOT17/train/MOT17-04-FRCNN",  # static cam
-                #"MOT17/train/MOT17-05-FRCNN",  # moving cam
-                #"MOT17/train/MOT17-11-FRCNN",  # moving cam
-                #"MOT17/train/MOT17-13-FRCNN",  # moving cam
-                #"MOT15/train/ETH-Bahnhof",  # moving cam
-                #"MOT15/train/ETH-Sunnyday",  # moving cam
-                #"MOT15/train/KITTI-13",  # moving cam
+                "MOT17/train/MOT17-05-FRCNN",  # moving cam
+                "MOT17/train/MOT17-11-FRCNN",  # moving cam
+                "MOT17/train/MOT17-13-FRCNN",  # moving cam
+                "MOT15/train/ETH-Bahnhof",  # moving cam
+                "MOT15/train/ETH-Sunnyday",  # moving cam
+                "MOT15/train/KITTI-13",  # moving cam
                 "MOT15/train/KITTI-17",  # static cam
                 "MOT15/train/PETS09-S2L1",  # static cam
                 "MOT15/train/TUD-Campus",  # static cam
@@ -36,19 +36,19 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             ],
             "val": [
                 "MOT17/train/MOT17-09-FRCNN",  # static cam
-                #"MOT17/train/MOT17-10-FRCNN"  # moving cam
+                "MOT17/train/MOT17-10-FRCNN"  # moving cam
             ]
         }
 
-        # self.lens = {
-        #     "train": [600, 1050, 837, 900, 750, 1000,
-        #        354, 340, 145, 795, 71, 179],
-        #     "val": [525, 654]
-        # }
         self.lens = {
-            "train": [600, 1050, 145, 795, 71, 179],
-            "val": [525]
+            "train": [600, 1050, 837, 900, 750, 1000,
+               354, 340, 145, 795, 71, 179],
+            "val": [525, 654]
         }
+        # self.lens = {
+        #     "train": [600, 1050, 145, 795, 71, 179],
+        #     "val": [525]
+        # }
 
         self.root_dir = root_dir
         self.mode = mode

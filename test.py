@@ -10,7 +10,6 @@ from video_cap import VideoCap
 from mvt.utils import draw_motion_vectors, draw_boxes
 
 from detector import DetectorTF
-from config import Config
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
@@ -18,19 +17,28 @@ from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
 
 if __name__ == "__main__":
 
-    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4.mp4"
+    #video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4.mp4"  # static cam
+    video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-mpeg4.mp4"  # moving cam
+
+    detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
+    detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
+    detector_interval = 20
+    tracker_weights_file = "models/tracker/2019-10-16_09-24-32/model_lowest_loss.pth"
+    tracker_iou_thres = 0.05
+
+    scaling_factor = 1.0
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
 
-    detector = DetectorTF(path=Config.DETECTOR_PATH,
-                        box_size_threshold=Config.DETECTOR_BOX_SIZE_THRES,
-                        scaling_factor=Config.SCALING_FACTOR,
+    detector = DetectorTF(path=detector_path,
+                        box_size_threshold=detector_box_size_thres,
+                        scaling_factor=scaling_factor,
                         gpu=0)
 
-    tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=Config.TRACKER_IOU_THRES)
-    tracker_deep = MotionVectorTrackerDeep(iou_threshold=Config.TRACKER_IOU_THRES,
-        weights_file=Config.TRACKER_WEIGHTS_FILE)
+    tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres)
+    tracker_deep = MotionVectorTrackerDeep(iou_threshold=tracker_iou_thres,
+        weights_file=tracker_weights_file)
 
     cap = VideoCap()
 
@@ -57,10 +65,6 @@ if __name__ == "__main__":
             print("Could not read the next frame")
             break
 
-        print("-------------------")
-        print("Frame Index: ", frame_idx)
-        print("Frame type: ", frame_type)
-
         # draw entire field of motion vectors
         frame = draw_motion_vectors(frame, motion_vectors)
 
@@ -75,7 +79,7 @@ if __name__ == "__main__":
         frame = cv2.putText(frame, "Deep Tracker Prediction", (15, 165), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_tracker_deep, 2, cv2.LINE_AA)
 
         # update with detections
-        if frame_idx % Config.DETECTOR_INTERVAL == 0:
+        if frame_idx % detector_interval == 0:
             detections = detector.detect(frame)
             det_boxes = detections['detection_boxes']
             tracker_baseline.update(motion_vectors, frame_type, det_boxes)

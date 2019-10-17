@@ -95,8 +95,11 @@ if __name__ == '__main__':
     str_summary = mm.io.render_summary(summary, formatters=mh.formatters, namemap=mm.io.motchallenge_metric_names)
     print(str_summary)
 
-    # print to file
+    # print to text file
     with open(os.path.join(args.tests, "mot_metrics.log"), mode="w") as text_file:
         print(str_summary, file=text_file)
+
+    # save dataframe to pickle file
+    pickle.dump(summary, open(os.path.join(args.tests, "mot_metrics.pkl"), "wb"))
 
     logging.info('Completed')
