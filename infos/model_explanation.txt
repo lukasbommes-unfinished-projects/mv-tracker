@@ -1,10 +1,15 @@
-model training on MF PC:
+2019-10-18_04-33-16
 
-- batch_size: 8
-- initial lr: 10e-4
-- lr scheduler: step_size=10, gama=0.1
-- epochs: 80
-- regularization: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
+model: pnet_two_pools
+batch_size: 16
+epochs_trained: 80
+initial learning rate: 1e-5
+scheduler: every 40 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
+dataset: static cam + moving cam (full)
+tensorboard_id: Oct18_04-33-16_de2d11b5ab38
+
+################################################
 
 
 2019-10-17_08-16-45:

@@ -12,7 +12,7 @@ from lib.dataset.dataset import MotionVectorDataset
 if __name__ == "__main__":
 
     # configure desired dataset settings here
-    batch_size = 16
+    batch_size = 1
     codec = "mpeg4"
     modes = ["train", "val"]  # which datasets to generate
     input_folder = "data"  # where to look for the input dataset, relative to root dir
