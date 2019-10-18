@@ -7,7 +7,7 @@ model training on MF PC:
 - regularization: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
 
 
-2019-10-17_05-58-07:
+2019-10-17_08-16-45:
 
 batch_size: 16
 epochs_trained: 80
@@ -15,7 +15,7 @@ initial learning rate: 1e-5
 scheduler: every 40 epochs reduction by factor 10
 augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
 dataset: static cam + moving cam (full)
-tensorboard_id:
+tensorboard_id: Oct17_08-16-45_de2d11b5ab38
 
 
 
