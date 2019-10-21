@@ -2,6 +2,7 @@ import os
 import time
 import datetime
 import copy
+import argparse
 from tqdm import tqdm
 
 import numpy as np
@@ -18,6 +19,14 @@ from lib.visualize_model import Visualizer
 
 
 torch.set_printoptions(precision=10)
+
+def weight_checksum(model):
+    checksum = 0
+    for p in model.parameters():
+        s = p.data.sum().detach().cpu().numpy()
+        checksum += s
+    return checksum
+
 
 def log_weights(model, epoch, writer):
     state_dict = model.state_dict()
@@ -46,6 +55,8 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
     best_loss = 99999.0
     best_mean_iou = 0.0
     iterations = {"train": 0, "val": 0}
+
+    print("Weight sum before training: {}".format(weight_checksum(model)))
 
     for epoch in range(num_epochs):
 
@@ -110,6 +121,8 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                             params_before_update = [p.detach().clone() for p in model.parameters()]
 
                         loss.backward()
+
+                        # acumulate gradients before updating (roughly equivalent to batch size > 1)
                         if (step + 1) % batch_size == 0:
                             optimizer.step()
                             optimizer.zero_grad()
@@ -122,15 +135,11 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                                 updates_norm = torch.norm(torch.cat(updates, axis=0))
                                 writer.add_scalar('update to weight ratio', updates_norm / params_norm, iterations["train"])
 
-                    pbar.update()
-
-                # log loss
                 running_loss.append(loss.item())
-                if write_tensorboard_log:
-                    writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
 
-                # log mean IoU of all predicted and ground truth boxes
-                if write_tensorboard_log:
+                if (step + 1) % batch_size == 0:
+
+                    # log loss and mean IoU of all predicted and ground truth boxes
                     boxes_prev = boxes_prev[num_boxes_mask].detach()
                     velocities_pred = velocities_pred.detach()
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
@@ -138,9 +147,14 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                     boxes = boxes[:, 1:]
                     mean_iou = compute_mean_iou(boxes_pred, boxes)
                     running_mean_iou.append(mean_iou)
-                    writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
 
-                iterations[phase] += 1
+                    if write_tensorboard_log:
+                        writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
+                        writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
+
+                    iterations[phase] += 1
+
+                pbar.update()
 
             pbar.close()
 
@@ -152,16 +166,17 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                 writer.add_scalar('Epoch Loss/{}'.format(phase), epoch_loss, epoch)
                 writer.add_scalar('Epoch Mean IoU/{}'.format(phase), epoch_mean_iou, epoch)
 
-            if save_model:
-                if phase == "val" and epoch_loss <= best_loss:
-                    best_loss = epoch_loss
+            if phase == "val" and epoch_loss <= best_loss:
+                best_loss = epoch_loss
+                if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    torch.save(best_model_wts, os.path.join(outdir_name, "model_lowest_loss.pth"))
+                    torch.save(best_model_wts, os.path.join(outdir_name, "model_lowest_loss_epoch_{}.pth".format(epoch)))
 
-                if phase == "val" and epoch_mean_iou >= best_mean_iou:
-                    best_mean_iou = epoch_mean_iou
+            if phase == "val" and epoch_mean_iou >= best_mean_iou:
+                best_mean_iou = epoch_mean_iou
+                if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    torch.save(best_model_wts, os.path.join(outdir_name, "model_highest_iou.pth"))
+                    torch.save(best_model_wts, os.path.join(outdir_name, "model_highest_iou_epoch_{}.pth".format(epoch)))
 
             #if phase == "val" and scheduler:
             #    scheduler.step(epoch_loss)
@@ -169,7 +184,8 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
         if scheduler:
             scheduler.step()
 
-        log_weights(model, epoch, writer)
+        if write_tensorboard_log:
+            log_weights(model, epoch, writer)
 
         print(velocities)
         print(velocities_pred)
@@ -178,21 +194,38 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Lowest validation loss: {}'.format(best_loss))
 
-    model.load_state_dict(best_model_wts)
+    print("Weight sum after training: {}".format(weight_checksum(model)))
+
+    if save_model:
+        best_model_wts = copy.deepcopy(model.state_dict())
+        torch.save(best_model_wts, os.path.join(outdir_name, "model_final.pth"))
+
     if write_tensorboard_log:
         writer.close()
-    return model
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', type=int, default=0)
+    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--learning_rate', type=float, default=1e-4)
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
+
+    args = parse_args()
+
     root_dir = "data_precomputed"
     train_parallel = False
     modes = ["train", "val"]
     datasets = {x: MotionVectorDatasetPrecomputed(root_dir=os.path.join(root_dir, x)) for x in modes}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1, shuffle=True, num_workers=8) for x in modes}
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:{}".format(args.gpu) if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    print(f"Using learning rate {args.learning_rate}")
+    print(f"Using batch size {args.batch_size}")
 
     model = PropagationNetwork()
     if train_parallel and torch.cuda.device_count() > 1:
@@ -202,11 +235,11 @@ if __name__ == "__main__":
 
     criterion = nn.SmoothL1Loss(reduction='mean')
     #criterion = nn.MSELoss(reduction='mean')
-    optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999),
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.999),
         eps=1e-08, weight_decay=0.0005, amsgrad=False)  # weight_decay=0.0001
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
-    best_model = train(model, criterion, optimizer, scheduler=scheduler,
-        batch_size=16, num_epochs=80, visu=False, write_tensorboard_log=True,
+    train(model, criterion, optimizer, scheduler=scheduler, batch_size=args.batch_size,
+        num_epochs=120, visu=False, write_tensorboard_log=True,
         save_model=True)

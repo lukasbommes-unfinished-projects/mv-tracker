@@ -17,15 +17,15 @@ from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
 
 if __name__ == "__main__":
 
-    #video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4.mp4"  # test set, static cam
+    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4.mp4"  # test set, static cam
     #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-mpeg4.mp4"  # test set, moving cam
-    video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-mpeg4.mp4"  # val set, static cam
+    #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-mpeg4.mp4"  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-mpeg4.mp4"  # val set, moving cam
 
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
     detector_interval = 20
-    tracker_weights_file = "models/tracker/2019-10-17_08-16-45/model_lowest_loss.pth" #2019-10-16_09-24-32/model_lowest_loss.pth"
+    tracker_weights_file = "models/tracker/2019-10-20_04-37-53/model_final.pth" #2019-10-16_09-24-32/model_lowest_loss.pth"
     tracker_iou_thres = 0.05
 
     scaling_factor = 1.0

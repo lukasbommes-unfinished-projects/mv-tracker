@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
-from lib.models.pnet_two_pools import PropagationNetwork, layer_keys
+from lib.models.pnet_single_branch import PropagationNetwork, layer_keys
 from lib.dataset.dataset_precomputed import MotionVectorDatasetPrecomputed
 from lib.dataset.velocities import box_from_velocities
 from lib.utils import compute_mean_iou
@@ -185,8 +185,6 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False,
 if __name__ == "__main__":
     root_dir = "data_precomputed"
     train_parallel = True
-    write_tensorboard_log = True
-    save_model = True
     modes = ["train", "val"]
     datasets = {x: MotionVectorDatasetPrecomputed(root_dir=os.path.join(root_dir, x)) for x in modes}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1, shuffle=True, num_workers=8) for x in modes}
@@ -202,11 +200,11 @@ if __name__ == "__main__":
 
     criterion = nn.SmoothL1Loss(reduction='mean')
     #criterion = nn.MSELoss(reduction='mean')
-    optimizer = optim.Adam(model.parameters(), lr=1e-5, betas=(0.9, 0.999),
+    optimizer = optim.Adam(model.parameters(), lr=1e-4, betas=(0.9, 0.999),
         eps=1e-08, weight_decay=0.0005, amsgrad=False)  # weight_decay=0.0001
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
     best_model = train(model, criterion, optimizer, scheduler=scheduler,
-        num_epochs=80, visu=False, write_tensorboard_log=write_tensorboard_log,
-        save_model=save_model)
+        num_epochs=160, visu=False, write_tensorboard_log=True,
+        save_model=True)

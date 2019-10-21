@@ -1,3 +1,43 @@
+2019-10-20_04-37-53
+
+model: pnet_single_branch
+batch_size: 16 (accumulated gradients training)
+epochs_trained: 120
+initial learning rate: 1e-4
+scheduler: every 40 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
+dataset: static cam
+tensorboard_id: Oct20_04-37-53_de2d11b5ab38
+
+
+2019-10-20_04-35-02
+
+model: pnet_single_branch
+batch_size: 8 (accumulated gradients training)
+epochs_trained: 120
+initial learning rate: 1e-4
+scheduler: every 40 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
+dataset: static cam
+tensorboard_id: Oct20_04-35-02_de2d11b5ab38
+
+################################################
+
+
+2019-10-19_19-23-37
+
+model: pnet_single_branch
+batch_size: 128 (accumulated gradients training)
+epochs_trained: 160 (this model is from epoch 21)
+initial learning rate: 1e-4
+scheduler: every 40 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
+dataset: static cam
+tensorboard_id: Oct19_19-23-37_de2d11b5ab38
+
+################################################
+
+
 2019-10-18_04-33-16
 
 model: pnet_two_pools
@@ -8,6 +48,8 @@ scheduler: every 40 epochs reduction by factor 10
 augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
 dataset: static cam + moving cam (full)
 tensorboard_id: Oct18_04-33-16_de2d11b5ab38
+
+Note: Normalization of motion vectors and velocities was wrong (those of static only)
 
 ################################################
 
@@ -22,6 +64,7 @@ augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
 dataset: static cam + moving cam (full)
 tensorboard_id: Oct17_08-16-45_de2d11b5ab38
 
+Note: Normalization of motion vectors and velocities was wrong (those of static only)
 
 
 ################################################
@@ -36,6 +79,7 @@ scheduler: every 40 epochs reduction by factor 10
 augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
 dataset: static cam only
 tensorboard_id: Oct16_09-24-32_de2d11b5ab38
+                Oct19_05-34-00_de2d11b5ab38 (same settings, run 2)
 
 Notes: Added color augmentation and changed learning rate schedule.
 

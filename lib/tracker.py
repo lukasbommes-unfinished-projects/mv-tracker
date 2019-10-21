@@ -44,11 +44,14 @@ class MotionVectorTracker:
         self.model = PropagationNetwork().to(self.device)
         state_dict = torch.load(weights_file)
         # if model was trained with nn.DataParallel we need to alter the state dict
-        new_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            name = k[7:]  # remove 'module.'
-            new_state_dict[name] = v
-        self.model.load_state_dict(new_state_dict)
+        if "module" in list(state_dict.keys())[0]:
+            new_state_dict = OrderedDict()
+            for k, v in state_dict.items():
+                name = k[7:]  # remove 'module.'
+                new_state_dict[name] = v
+            self.model.load_state_dict(new_state_dict)
+        else:
+            self.model.load_state_dict(state_dict)
         self.model.eval()
 
 
