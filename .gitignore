@@ -1,28 +1,22 @@
 *.avi
-/eval_output/
 .ipynb_checkpoints/
 __pycache__/
 
 /infos/paper/
-/models/
-/data/MOT17/train/
-/data/MOT17/test/
-/data/MOT17/preprocessed/
-/data/MOT17/sequences/
 
-/models/*.pkl
 /pytorch/
+/pytorch_old/
+
+/models/
 /runs/
-pytorch.zip
-/data_precomputed/
+/eval_output/
 /data_precomputed*/
+
 /overfit_test/runs/
 /overfit_test/data/
 /overfit_test/data_10_samples/
 /overfit_test/data_whole_video/
-/data_precomputed_full/
 
-/data/MOT17/MOT17.zip
-
+/data/MOT17/
 /data/MOT15/
 /data/MOT16/

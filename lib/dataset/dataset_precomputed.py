@@ -26,7 +26,7 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
             RandomFlip(directions=["x", "y"]),
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
-            RandomMotionChange(scale=1.0),
+            #RandomMotionChange(scale=1.0),
             #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000),
             #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920),
         ])

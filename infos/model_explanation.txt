@@ -1,3 +1,44 @@
+
+
+################################################
+
+Explanation of the following for runs:
+Goal was to replace the previous data loader which uses batch sizes > 1 by a
+loader that uses batch size 1. Batched training is achieved by accumulating
+gradients in a for loop instead. This was tested in Oct20_04-37-53_de2d11b5ab38,
+Oct20_04-35-02_de2d11b5ab38 and Oct21_02-31-18_de2d11b5ab38 for batch sizes
+16, 8 and 4. Expected result is that Oct20_04-37-53_de2d11b5ab38 performs
+similar to Oct16_09-24-32_de2d11b5ab38 as settings are the same. However, loss
+of the new batching method is generally higher and also performance in the real
+world test is lower. Thus, in Oct21_03-46-37_de2d11b5ab38 color augmentation was
+disabled.
+
+2019-10-21_03-46-37
+
+model: pnet_single_branch
+batch_size: 8 (accumulated gradients training)
+epochs_trained: 120
+initial learning rate: 1e-4
+scheduler: every 40 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"])
+dataset: static cam
+tensorboard_id: Oct21_03-46-37_de2d11b5ab38
+
+Note: Performance should be comparable with Oct16_09-24-32_de2d11b5ab38
+
+
+2019-10-21_02-31-18
+
+model: pnet_single_branch
+batch_size: 4 (accumulated gradients training)
+epochs_trained: 120
+initial learning rate: 1e-4
+scheduler: every 40 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
+dataset: static cam
+tensorboard_id: Oct21_02-31-18_de2d11b5ab38
+
+
 2019-10-20_04-37-53
 
 model: pnet_single_branch
