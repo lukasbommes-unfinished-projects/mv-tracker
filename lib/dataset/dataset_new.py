@@ -16,47 +16,65 @@ from lib.transforms.transforms import StandardizeMotionVectors
 
 
 class MotionVectorDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, mode, codec="mpeg4", visu=False, debug=False):
+    def __init__(self, root_dir, mode, codec="mpeg4", static_only=False,
+        exclude_keyframes=True, visu=False, debug=False):
 
         self.DEBUG = debug  # whether to print debug information
 
-        self.sequences = {
-            "train": [
-                "MOT17/train/MOT17-02-FRCNN",  # static cam
-                "MOT17/train/MOT17-04-FRCNN",  # static cam
-                "MOT17/train/MOT17-05-FRCNN",  # moving cam
-                "MOT17/train/MOT17-11-FRCNN",  # moving cam
-                "MOT17/train/MOT17-13-FRCNN",  # moving cam
-                "MOT15/train/ETH-Bahnhof",  # moving cam
-                "MOT15/train/ETH-Sunnyday",  # moving cam
-                "MOT15/train/KITTI-13",  # moving cam
-                "MOT15/train/KITTI-17",  # static cam
-                "MOT15/train/PETS09-S2L1",  # static cam
-                "MOT15/train/TUD-Campus",  # static cam
-                "MOT15/train/TUD-Stadtmitte"  # static cam
-            ],
-            "val": [
-                "MOT17/train/MOT17-09-FRCNN",  # static cam
-                "MOT17/train/MOT17-10-FRCNN"  # moving cam
-            ]
-        }
+        if static_only:
+            self.sequences = {
+                "train": [
+                    "MOT17/train/MOT17-02-FRCNN",  # static cam
+                    "MOT17/train/MOT17-04-FRCNN",  # static cam
+                    "MOT15/train/KITTI-17",  # static cam
+                    "MOT15/train/PETS09-S2L1",  # static cam
+                    "MOT15/train/TUD-Campus",  # static cam
+                    "MOT15/train/TUD-Stadtmitte"  # static cam
+                ],
+                "val": [
+                    "MOT17/train/MOT17-09-FRCNN",  # static cam
+                ]
+            }
 
-        self.lens = {
-            "train": [600, 1050, 837, 900, 750, 1000,
-               354, 340, 145, 795, 71, 179],
-            "val": [525, 654]
-        }
+            self.lens = {
+                "train": [600, 1050, 145, 795, 71, 179],
+                "val": [525]
+            }
 
-        # self.lens = {
-        #     "train": [600, 1050, 145, 795, 71, 179],
-        #     "val": [525]
-        # }
+        else:
+            self.sequences = {
+                "train": [
+                    "MOT17/train/MOT17-02-FRCNN",  # static cam
+                    "MOT17/train/MOT17-04-FRCNN",  # static cam
+                    "MOT17/train/MOT17-05-FRCNN",  # moving cam
+                    "MOT17/train/MOT17-11-FRCNN",  # moving cam
+                    "MOT17/train/MOT17-13-FRCNN",  # moving cam
+                    "MOT15/train/ETH-Bahnhof",  # moving cam
+                    "MOT15/train/ETH-Sunnyday",  # moving cam
+                    "MOT15/train/KITTI-13",  # moving cam
+                    "MOT15/train/KITTI-17",  # static cam
+                    "MOT15/train/PETS09-S2L1",  # static cam
+                    "MOT15/train/TUD-Campus",  # static cam
+                    "MOT15/train/TUD-Stadtmitte"  # static cam
+                ],
+                "val": [
+                    "MOT17/train/MOT17-09-FRCNN",  # static cam
+                    "MOT17/train/MOT17-10-FRCNN"  # moving cam
+                ]
+            }
+
+            self.lens = {
+                "train": [600, 1050, 837, 900, 750, 1000,
+                   354, 340, 145, 795, 71, 179],
+                "val": [525, 654]
+            }
 
         self.scales = [1.0, 0.75, 0.5]
 
         self.root_dir = root_dir
         self.mode = mode
         self.codec = codec
+        self.exclude_keyframes = exclude_keyframes
         self.visu = visu
 
         self.index = []   # stores (sequence_idx, scale_idx, frame_idx) for available samples
@@ -66,6 +84,7 @@ class MotionVectorDataset(torch.utils.data.Dataset):
 
 
     def load_groundtruth_(self):
+        """Load ground truth boxes and IDs from annotation files."""
         self.gt_ids = []
         self.gt_boxes = []
         for sequence, num_frames in zip(self.sequences[self.mode], self.lens[self.mode]):
@@ -75,40 +94,8 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             self.gt_boxes.append(gt_boxes)
 
 
-    def build_index_(self):
-        """Generate index of all usable frames of all sequences.
-
-        Usable frames are those which have a ground truth annotation and for
-        which the previous frame also has a ground truth annotation. Only those
-        ground truth annotation for which the eval flag is set to 1 are considered
-        (see `only_eval` parameter in load_groundtruth).
-
-        The index has the format [(0, 0, 2), (0, 0, 3), ..., (2, 2, 2),
-        (2, 2, 3), (2, 2, 4)] where the first item of the tuple is the sequence
-        index (0-based), the second item is the scale index (0-based) and the
-        third item is the frame index (0-based) within this sequence.
-        """
-        for sequence_idx, sequence in enumerate(self.sequences[self.mode]):
-            for scale_idx in range(len(self.scales)):
-                last_none = True
-                for frame_idx, gt_id in enumerate(self.gt_ids[sequence_idx]):
-                    if gt_id is None:
-                        last_none = True
-                        continue
-                    if last_none:
-                        last_none = False
-                        continue
-                    self.index.append((sequence_idx, scale_idx, frame_idx))
-
-
-    def __len__(self):
-        total_len = len(self.index)
-        if self.DEBUG:
-            print("Overall length of {} dataset: {}".format(self.mode, total_len))
-        return total_len
-
-
     def load_frame_(self, sequence_idx, scale_idx, frame_idx):
+        """Load, scale and return a single video frame."""
         frame_file = os.path.join(self.root_dir,
             self.sequences[self.mode][sequence_idx], "img1",
             "{:06d}.jpg".format(frame_idx + 1))
@@ -119,7 +106,8 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         return frame
 
 
-    def load_motion_vectors_(self, sequence_idx, scale_idx, frame_idx):
+    def load_frame_data_(self, sequence_idx, scale_idx, frame_idx):
+        """Load and return motion vectors and frame type of a specific frame."""
         mvs_file = os.path.join(self.root_dir,
             self.sequences[self.mode][sequence_idx], "mvs-{}-{}".format(
             self.codec, self.scales[scale_idx]), "{:06d}.pkl".format(
@@ -130,12 +118,53 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         return motion_vectors, frame_type
 
 
-    def __getitem__(self, idx):
+    def build_index_(self):
+        """Generate index of all usable frames of all sequences.
 
+        Usable frames are those which have a ground truth annotation and for
+        which the previous frame also has a ground truth annotation. Only those
+        ground truth annotation for which the eval flag is set to 1 are considered
+        (see `only_eval` parameter in load_groundtruth). If `excluse_keyframes`
+        is True keyframes (frame type "I") are also excluded from the index.
+
+        The index has the format [(0, 0, 2), (0, 0, 3), ..., (2, 2, 2),
+        (2, 2, 3), (2, 2, 4)] where the first item of the tuple is the sequence
+        index (0-based), the second item is the scale index (0-based) and the
+        third item is the frame index (0-based) within this sequence.
+        """
+        for sequence_idx, sequence in enumerate(self.sequences[self.mode]):
+            for scale_idx in range(len(self.scales)):
+                last_none = True
+                for frame_idx, gt_id in enumerate(self.gt_ids[sequence_idx]):
+                    # exclude frames without gt annotation from index
+                    if gt_id is None:
+                        last_none = True
+                        continue
+                    if last_none:
+                        last_none = False
+                        continue
+                    # exclude key frames from index
+                    if self.exclude_keyframes:
+                        _, frame_type = self.load_frame_data_(sequence_idx,
+                            scale_idx, frame_idx)
+                        if frame_type == "I":
+                            continue
+                    self.index.append((sequence_idx, scale_idx, frame_idx))
+
+
+    def __len__(self):
+        """Return the total length of the dataset."""
+        total_len = len(self.index)
+        if self.DEBUG:
+            print("Overall length of {} dataset: {}".format(self.mode, total_len))
+        return total_len
+
+
+    def __getitem__(self, idx):
+        """Retrieve item with index `idx` from the dataset."""
         sequence_idx, scale_idx, frame_idx = self.index[idx]
-        #sequence_idx, scale_idx, frame_idx = (0, 0, 0)
         frame = self.load_frame_(sequence_idx, scale_idx, frame_idx)
-        motion_vectors, frame_type = self.load_motion_vectors_(sequence_idx, scale_idx, frame_idx)
+        motion_vectors, frame_type = self.load_frame_data_(sequence_idx, scale_idx, frame_idx)
 
         if self.DEBUG:
             print(("Loaded frame {}, frame_type {}, mvs shape: {}, "
@@ -197,11 +226,6 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             "velocities": velocities
         }
 
-        # print("sequence_idx", sequence_idx, "scale_idx", scale_idx, "frame_idx", frame_idx)
-        # print("boxes_prev", boxes_prev, gt_ids_prev)
-        # print("boxes", boxes, gt_ids)
-        # print("velocities", velocities)
-
         if self.visu:
             sample["frame"] = frame
 
@@ -213,10 +237,11 @@ if __name__ == "__main__":
 
     batch_size = 1
     codec = "mpeg4"
-    datasets = {x: MotionVectorDataset(root_dir='data', codec=codec, visu=True,
-        debug=True, mode=x) for x in ["train", "val"]}
+    datasets = {x: MotionVectorDataset(root_dir='data', codec=codec,
+        static_only=False, exclude_keyframes=True, visu=True, debug=True,
+        mode=x) for x in ["train", "val"]}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=batch_size,
-        shuffle=False, num_workers=0) for x in ["train", "val"]}
+        shuffle=True, num_workers=0) for x in ["train", "val"]}
     stats = Stats()
 
     transform = StandardizeMotionVectors(mean=stats.motion_vectors["mean"],

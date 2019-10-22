@@ -176,10 +176,12 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False,
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Lowest validation loss: {}'.format(best_loss))
 
-    model.load_state_dict(best_model_wts)
+    if save_model:
+        best_model_wts = copy.deepcopy(model.state_dict())
+        torch.save(best_model_wts, os.path.join(outdir_name, "model_final.pth"))
+
     if write_tensorboard_log:
         writer.close()
-    return model
 
 
 if __name__ == "__main__":
@@ -205,6 +207,5 @@ if __name__ == "__main__":
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
-    best_model = train(model, criterion, optimizer, scheduler=scheduler,
-        num_epochs=160, visu=False, write_tensorboard_log=True,
-        save_model=True)
+    train(model, criterion, optimizer, scheduler=scheduler, num_epochs=160,
+        visu=False, write_tensorboard_log=True, save_model=True)

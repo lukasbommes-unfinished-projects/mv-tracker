@@ -48,8 +48,7 @@ def get_vectors_by_source(motion_vectors, source):
 
 
 def get_nonzero_vectors(motion_vectors):
-    """Returns subset of motion vectors which have non-zero magnitude.
-    """
+    """Returns subset of motion vectors which have non-zero magnitude."""
     if np.shape(motion_vectors)[0] == 0:
         return motion_vectors
     else:

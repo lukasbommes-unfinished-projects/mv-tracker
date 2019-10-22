@@ -1,4 +1,17 @@
+2019-10-21_17-32-25
 
+model: pnet_single_branch
+batch_size: 16
+epochs_trained: 160
+initial learning rate: 1e-4
+scheduler: every 40 epochs reduction by factor 10
+augmentation: no scale, random_flip(["x", "y"]), color_augmentation(scale=1.0)
+dataset: static cam + moving cam (full)
+tensorboard_id: Oct21_17-32-25_de2d11b5ab38
+
+Note: As compared to previous runs (Oct18_04-33-16_de2d11b5ab38,
+Oct17_08-16-45_de2d11b5ab38) the dataset stats differ. Previously, wrong
+values (those of the static cam dataset) were used.
 
 ################################################
 
