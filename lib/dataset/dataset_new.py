@@ -1,5 +1,6 @@
 import os
 import pickle
+import glob
 import torch
 import cv2
 import numpy as np
@@ -8,7 +9,8 @@ from video_cap import VideoCap
 
 from lib.dataset.loaders import load_groundtruth
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
-    normalize_vectors, motion_vectors_to_image
+    normalize_vectors, motion_vectors_to_image, motion_vectors_to_grid, \
+    motion_vectors_to_grid_interpolated
 from lib.dataset.velocities import velocities_from_boxes
 from lib.dataset.stats import Stats
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
@@ -16,8 +18,60 @@ from lib.transforms.transforms import StandardizeMotionVectors
 
 
 class MotionVectorDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, mode, codec="mpeg4", static_only=False,
-        exclude_keyframes=True, visu=False, debug=False):
+    """Dataset for object tracking in compressed video domain.
+
+    Args:
+        root_dir (`str`): The relative path of the dataset root. The directory
+            should containe the following subdirectory structure whereby the
+            train and test folders contain the corresponding MOT dataset:
+            <root_dir>
+                |
+                |---MOT15/
+                |     |---train/
+                |     |---test/
+                |
+                |---MOT16/
+                |     |---train/
+                |     |---test/
+                |
+                |---MOT17/
+                      |---train/
+                      |---test/
+
+        mode (`str`): Either "train" or "val". Specifies which split of the data
+            set to iterate over. Refer to the `self.sequences` attribute below
+            to see which videos are contained in each split.
+
+        codec (`str`): Either "mpeg4" or "h264". Determines whether motion
+            vectors are loaded from the mpeg4 or h264 encoded video. Ensure to
+            provide the raw data by setting the codec in the `video_write.py`
+            script accordingly and running the script.
+
+        mvs_mode (`str`): Either "upsampled" or "dense". In "upsampled" mode
+            motion vectors are encoded as image with same dimensions as the
+            original video frame. In "dense" mode motion vectors are not
+            upsampled and a compact representation in form of an image is
+            generated. In this representation each pixel corresponds to a
+            macroblock in the original frame. In both cases, green channel is
+            used for y motion, red channel for x motion and blue channel is
+            always zero.
+
+        static_only (`bool`): If True use only those videos in MOT15 and MOT17
+            which have a static (not moving) camera.
+
+        exclude_keyframes (`bool`): If True, keyframes (frame type "I") are
+            excluded from the dataset.
+
+        visu (`bool`): If True show frames, motion vectors and boxes of each
+            sample while iterating over the dataset. Activating this will slow
+            down the data loading.
+
+        debug (`bool`): If True print debug information.
+
+    """
+    def __init__(self, root_dir="data", mode="train", codec="mpeg4",
+        mvs_mode="upsampled", static_only=False, exclude_keyframes=True,
+        visu=False, debug=False):
 
         self.DEBUG = debug  # whether to print debug information
 
@@ -34,11 +88,6 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                 "val": [
                     "MOT17/train/MOT17-09-FRCNN",  # static cam
                 ]
-            }
-
-            self.lens = {
-                "train": [600, 1050, 145, 795, 71, 179],
-                "val": [525]
             }
 
         else:
@@ -63,31 +112,39 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                 ]
             }
 
-            self.lens = {
-                "train": [600, 1050, 837, 900, 750, 1000,
-                   354, 340, 145, 795, 71, 179],
-                "val": [525, 654]
-            }
-
         self.scales = [1.0, 0.75, 0.5]
 
         self.root_dir = root_dir
         self.mode = mode
         self.codec = codec
+        self.mvs_mode = mvs_mode
         self.exclude_keyframes = exclude_keyframes
         self.visu = visu
 
         self.index = []   # stores (sequence_idx, scale_idx, frame_idx) for available samples
 
+        self.get_sequence_lengths_()
         self.load_groundtruth_()
+        if self.DEBUG:
+            print("Loaded ground truth files.")
         self.build_index_()
+        if self.DEBUG:
+            print("Built dataset index.")
+
+
+    def get_sequence_lengths_(self):
+        """Determine number of frames in each video sequence."""
+        self.lens = []
+        for sequence in self.sequences[self.mode]:
+            frame_files = glob.glob(os.path.join(self.root_dir, sequence, "img1/*.jpg"))
+            self.lens.append(len(frame_files))
 
 
     def load_groundtruth_(self):
         """Load ground truth boxes and IDs from annotation files."""
         self.gt_ids = []
         self.gt_boxes = []
-        for sequence, num_frames in zip(self.sequences[self.mode], self.lens[self.mode]):
+        for sequence, num_frames in zip(self.sequences[self.mode], self.lens):
             gt_file = os.path.join(self.root_dir, sequence, "gt/gt.txt")
             gt_ids, gt_boxes, _ = load_groundtruth(gt_file, num_frames, only_eval=True)
             self.gt_ids.append(gt_ids)
@@ -174,13 +231,21 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         # convert motion vectors to image (for I frame black image is returned)
         motion_vectors = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
         motion_vectors = normalize_vectors(motion_vectors)
-        motion_vectors = get_nonzero_vectors(motion_vectors)
-        motion_vectors_copy = np.copy(motion_vectors)
-        motion_vectors = motion_vectors_to_image(motion_vectors, (frame.shape[1], frame.shape[0]))
+        motion_vectors_for_visu = np.copy(get_nonzero_vectors(motion_vectors))
+
+        if self.mvs_mode == "upsampled":
+            motion_vectors = get_nonzero_vectors(motion_vectors)
+            motion_vectors = motion_vectors_to_image(motion_vectors, (frame.shape[1], frame.shape[0]))
+        elif self.mvs_mode == "dense":
+            if self.codec == "mpeg4":
+                motion_vectors = motion_vectors_to_grid(motion_vectors, (frame.shape[1], frame.shape[0]))
+            elif self.codec == "h264":
+                motion_vectors = motion_vectors_to_grid_interpolated(motion_vectors, (frame.shape[1], frame.shape[0]))
+
         motion_vectors = torch.from_numpy(motion_vectors).float()
 
         if self.visu:
-            frame = draw_motion_vectors(frame, motion_vectors_copy, format='numpy')
+            frame = draw_motion_vectors(frame, motion_vectors_for_visu, format='numpy')
             sequence_name = str.split(self.sequences[self.mode][sequence_idx], "/")[-1]
             cv2.putText(frame, 'Sequence: {}'.format(sequence_name), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
             cv2.putText(frame, 'Frame Idx: {}'.format(frame_idx + 1), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
@@ -237,11 +302,12 @@ if __name__ == "__main__":
 
     batch_size = 1
     codec = "mpeg4"
-    datasets = {x: MotionVectorDataset(root_dir='data', codec=codec,
+    mvs_mode = "dense"
+    datasets = {x: MotionVectorDataset(root_dir='data', codec=codec, mvs_mode=mvs_mode,
         static_only=False, exclude_keyframes=True, visu=True, debug=True,
         mode=x) for x in ["train", "val"]}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=batch_size,
-        shuffle=True, num_workers=0) for x in ["train", "val"]}
+        shuffle=False, num_workers=0) for x in ["train", "val"]}
     stats = Stats()
 
     transform = StandardizeMotionVectors(mean=stats.motion_vectors["mean"],

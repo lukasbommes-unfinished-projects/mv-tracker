@@ -12,7 +12,7 @@ sys.path.append("..")
 from mvt import trackerlib
 from mvt.utils import draw_motion_vectors, draw_boxes
 
-from lib.models.pnet_single_branch import PropagationNetwork
+from lib.models.pnet_upsampled import PropagationNetwork
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
     normalize_vectors, motion_vectors_to_image
 from lib.dataset.velocities import box_from_velocities

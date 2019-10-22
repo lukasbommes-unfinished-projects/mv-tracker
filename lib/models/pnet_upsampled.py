@@ -14,16 +14,13 @@ class PropagationNetwork(nn.Module):
 
         self.POOLING_SIZE = 7  # the ROIs are split into m x m regions
         self.FIXED_BLOCKS = 1
-        self.TRUNCATED = False
 
         # load pretrained weights
         resnet = resnet18()
         resnet_weights = model_zoo.load_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
         load_pretrained_weights_to_modified_resnet(resnet, resnet_weights)
 
-        input_channels = 2
         base = [
-            #nn.Conv2d(input_channels, 64, kernel_size=7, stride=2, padding=3, bias=False),
             resnet.conv1,
             resnet.bn1,
             resnet.relu,
@@ -51,7 +48,7 @@ class PropagationNetwork(nn.Module):
         self.conv1x1 = nn.Conv2d(512, 4*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
         self.pooling = nn.AvgPool2d(kernel_size=self.POOLING_SIZE, stride=self.POOLING_SIZE)
 
-        print([p.requires_grad for p in self.base.parameters()])
+        print([p.requires_grad for p in self.parameters()])
         print(list(self.children()))
 
 
@@ -121,5 +118,5 @@ layer_keys = [
 if __name__ == "__main__":
 
     model = PropagationNetwork()
-    print([p.requires_grad for p in model.base.parameters()])
+    print([p.requires_grad for p in model.parameters()])
     print(list(model.children()))

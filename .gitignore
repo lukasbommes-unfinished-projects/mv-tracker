@@ -17,6 +17,8 @@ __pycache__/
 /overfit_test/data_10_samples/
 /overfit_test/data_whole_video/
 
+/overfit_dense_model/
+
 /data/MOT17/
 /data/MOT15/
 /data/MOT16/

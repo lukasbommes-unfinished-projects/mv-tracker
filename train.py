@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
-from lib.models.pnet_single_branch import PropagationNetwork, layer_keys
+from lib.models.pnet_upsampled import PropagationNetwork, layer_keys
 from lib.dataset.dataset_precomputed import MotionVectorDatasetPrecomputed
 from lib.dataset.velocities import box_from_velocities
 from lib.utils import compute_mean_iou

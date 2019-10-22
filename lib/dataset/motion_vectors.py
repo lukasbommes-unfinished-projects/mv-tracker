@@ -1,6 +1,7 @@
 import math
-import numpy as np
 import torch
+import numpy as np
+from scipy.interpolate import griddata
 
 
 def get_vectors_by_source(motion_vectors, source):
@@ -144,3 +145,34 @@ def motion_vectors_to_image(motion_vectors, frame_shape=(1920, 1080), scale=Fals
     image = image[0:frame_shape[1], 0:frame_shape[0], :]
 
     return image
+
+
+def motion_vectors_to_grid(motion_vectors, frame_shape=(1920, 1080)):
+    """Converts motion vectors into an image."""
+    motion_vectors_grid = np.zeros((math.ceil(frame_shape[1]/16), math.ceil(frame_shape[0]/16), 3), dtype=np.float32)
+    if motion_vectors.shape[0] > 0:
+        motion_vectors = motion_vectors.astype(np.float32)
+        mvs_x = motion_vectors[:, 5].astype(np.int64)
+        mvs_y = motion_vectors[:, 6].astype(np.int64)
+        x = ((mvs_x - 8) // 16).astype(np.int64)
+        y = ((mvs_y - 8) // 16).astype(np.int64)
+        motion_vectors_grid[y, x, 2] = motion_vectors[:, 7] / motion_vectors[:, 9]  # x component
+        motion_vectors_grid[y, x, 1] = motion_vectors[:, 8] / motion_vectors[:, 9] # y component
+    return motion_vectors_grid
+
+
+def motion_vectors_to_grid_interpolated(motion_vectors, frame_shape=(1920, 1080), method='nearest'):
+    """Interpolates motion vectors on a 16 x 16 grid and converts them into an image."""
+    motion_vectors_grid = np.zeros((math.ceil(frame_shape[1]/16), math.ceil(frame_shape[0]/16), 3), dtype=np.float32)
+    if motion_vectors.shape[0] > 0:
+        mvs_x = motion_vectors[:, 5]
+        mvs_y = motion_vectors[:, 6]
+        mvs_x_motion = motion_vectors[:, 7] / motion_vectors[:, 9]
+        mvs_y_motion = motion_vectors[:, 8] / motion_vectors[:, 9]
+        xi = np.arange(8, math.ceil(frame_shape[0] / 16) * 16, 16)
+        yi = np.arange(8, math.ceil(frame_shape[1] / 16) * 16, 16)
+        mvs_x_motion_interp = griddata((mvs_x, mvs_y), mvs_x_motion, (xi[None, :], yi[:, None]), method=method)
+        mvs_y_motion_interp = griddata((mvs_x, mvs_y), mvs_y_motion, (xi[None, :], yi[:, None]), method=method)
+        motion_vectors_grid[:, :, 2] = mvs_x_motion_interp
+        motion_vectors_grid[:, :, 1] = mvs_y_motion_interp
+    return motion_vectors_grid
