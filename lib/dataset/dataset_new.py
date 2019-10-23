@@ -13,7 +13,7 @@ from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vector
     normalize_vectors, motion_vectors_to_image, motion_vectors_to_grid, \
     motion_vectors_to_grid_interpolated
 from lib.dataset.velocities import velocities_from_boxes
-from lib.dataset.stats import Stats
+from lib.dataset.stats import StatsMpeg4DenseStatic as Stats
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
@@ -49,6 +49,20 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             provide the raw data by setting the codec in the `video_write.py`
             script accordingly and running the script.
 
+        transforms (`torchvision.transform` of `None`): Transformations which
+            are applied to the generated samples. Can be either a single
+            transformation or a several transformations composed with
+            `torchvision.transforms.Compose`. For available transformations see
+            the module `lib.transforms.transforms`. If None no transformation
+            is applied.
+
+        scales (`list` of `float`): Compose the dataset of videos with different
+            scales as specified in this list. E.g. [1.0, 0.75, 0.5] means, the
+            video snippets are available at 100 %, 75 % and 50 % of their
+            original size. Ensure that the scaled videos were created previously
+            with the `video_write.py` and `extract_mvs.py` scripts inside the
+            data folder.
+
         mvs_mode (`str`): Either "upsampled" or "dense". In "upsampled" mode
             motion vectors are encoded as image with same dimensions as the
             original video frame. In "dense" mode motion vectors are not
@@ -72,8 +86,8 @@ class MotionVectorDataset(torch.utils.data.Dataset):
 
     """
     def __init__(self, root_dir="data", mode="train", codec="mpeg4",
-        transforms=None, mvs_mode="upsampled", static_only=False,
-        exclude_keyframes=True, visu=False, debug=False):
+        transforms=None, scales=[1.0, 0.75, 0.5], mvs_mode="upsampled",
+        static_only=False, exclude_keyframes=True, visu=False, debug=False):
 
         self.DEBUG = debug  # whether to print debug information
 
@@ -96,30 +110,29 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             self.sequences = {
                 "train": [
                     "MOT17/train/MOT17-02-FRCNN",  # static cam
-                    #"MOT17/train/MOT17-04-FRCNN",  # static cam
-                    #"MOT17/train/MOT17-05-FRCNN",  # moving cam
-                    #"MOT17/train/MOT17-11-FRCNN",  # moving cam
-                    #"MOT17/train/MOT17-13-FRCNN",  # moving cam
-                    #"MOT15/train/ETH-Bahnhof",  # moving cam
-                    #"MOT15/train/ETH-Sunnyday",  # moving cam
-                    #"MOT15/train/KITTI-13",  # moving cam
-                    #"MOT15/train/KITTI-17",  # static cam
-                    #"MOT15/train/PETS09-S2L1",  # static cam
-                    #"MOT15/train/TUD-Campus",  # static cam
-                    #"MOT15/train/TUD-Stadtmitte"  # static cam
+                    "MOT17/train/MOT17-04-FRCNN",  # static cam
+                    "MOT17/train/MOT17-05-FRCNN",  # moving cam
+                    "MOT17/train/MOT17-11-FRCNN",  # moving cam
+                    "MOT17/train/MOT17-13-FRCNN",  # moving cam
+                    "MOT15/train/ETH-Bahnhof",  # moving cam
+                    "MOT15/train/ETH-Sunnyday",  # moving cam
+                    "MOT15/train/KITTI-13",  # moving cam
+                    "MOT15/train/KITTI-17",  # static cam
+                    "MOT15/train/PETS09-S2L1",  # static cam
+                    "MOT15/train/TUD-Campus",  # static cam
+                    "MOT15/train/TUD-Stadtmitte"  # static cam
                 ],
                 "val": [
                     "MOT17/train/MOT17-09-FRCNN",  # static cam
-                    #"MOT17/train/MOT17-10-FRCNN"  # moving cam
+                    "MOT17/train/MOT17-10-FRCNN"  # moving cam
                 ]
             }
-
-        self.scales = [1.0, 0.75, 0.5]
 
         self.root_dir = root_dir
         self.transforms = transforms
         self.mode = mode
         self.codec = codec
+        self.scales = scales
         self.mvs_mode = mvs_mode
         self.exclude_keyframes = exclude_keyframes
         self.visu = visu
@@ -320,6 +333,9 @@ if __name__ == "__main__":
     batch_size = 1
     codec = "mpeg4"
     mvs_mode = "dense"
+    static_only = True
+    exclude_keyframes = True
+    scales = [1.0, 0.75, 0.5]
 
     transforms = {
         "train": torchvision.transforms.Compose([
@@ -337,13 +353,12 @@ if __name__ == "__main__":
     }
 
     datasets = {x: MotionVectorDataset(root_dir='data', transforms=transforms[x],
-        codec=codec, mvs_mode=mvs_mode, static_only=False, exclude_keyframes=True,
-        visu=True, debug=True, mode=x) for x in ["train", "val"]}
+        codec=codec, scales=scales, mvs_mode=mvs_mode, static_only=static_only,
+        exclude_keyframes=exclude_keyframes, visu=True, debug=True,
+        mode=x) for x in ["train", "val"]}
 
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=batch_size,
         shuffle=False, num_workers=0) for x in ["train", "val"]}
-
-    stats = Stats()
 
     step_wise = True
 
@@ -370,9 +385,10 @@ if __name__ == "__main__":
             motion_vectors = motion_vectors.numpy()
             motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
 
-            motion_vectors = draw_boxes(motion_vectors, boxes_prev[:, 1:], None, color=(200, 200, 200))
-            motion_vectors = draw_boxes(motion_vectors, boxes[:, 1:], None, color=(255, 255, 255))
-            motion_vectors = draw_velocities(motion_vectors, boxes[:, 1:], velocities, scale=1000)
+            # draw boxes on motion vector image
+            #motion_vectors = draw_boxes(motion_vectors, boxes_prev[:, 1:], None, color=(200, 200, 200))
+            #motion_vectors = draw_boxes(motion_vectors, boxes[:, 1:], None, color=(255, 255, 255))
+            #motion_vectors = draw_velocities(motion_vectors, boxes[:, 1:], velocities, scale=1000)
 
             print("step: {}, MVS shape: {}".format(step, motion_vectors.shape))
 

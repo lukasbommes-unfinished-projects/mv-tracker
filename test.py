@@ -25,7 +25,7 @@ if __name__ == "__main__":
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
     detector_interval = 20
-    tracker_weights_file = "models/tracker/2019-10-20_04-37-53/model_final.pth" #2019-10-16_09-24-32/model_lowest_loss.pth"
+    tracker_weights_file = "models/tracker/2019-10-21_17-32-25/model_final.pth" #2019-10-16_09-24-32/model_lowest_loss.pth"
     tracker_iou_thres = 0.05
 
     scaling_factor = 1.0

@@ -129,12 +129,11 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False,
 
                 # log mean IoU of all predicted and ground truth boxes
                 if write_tensorboard_log:
-                    boxes_prev = boxes_prev[num_boxes_mask].detach()
-                    velocities_pred = velocities_pred.detach()
+                    boxes = boxes[num_boxes_mask].detach().view(-1, 5)
+                    boxes_prev = boxes_prev[num_boxes_mask].detach().view(-1, 5)
+                    velocities_pred = velocities_pred.detach().view(-1, 4)
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
-                    boxes = boxes[num_boxes_mask]
-                    boxes = boxes[:, 1:]
-                    mean_iou = compute_mean_iou(boxes_pred, boxes)
+                    mean_iou = compute_mean_iou(boxes_pred, boxes[:, 1:])
                     running_mean_iou.append(mean_iou)
                     writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
 
@@ -186,7 +185,7 @@ def train(model, criterion, optimizer, scheduler, num_epochs=2, visu=False,
 
 if __name__ == "__main__":
     root_dir = "data_precomputed"
-    train_parallel = True
+    train_parallel = False
     modes = ["train", "val"]
     datasets = {x: MotionVectorDatasetPrecomputed(root_dir=os.path.join(root_dir, x)) for x in modes}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1, shuffle=True, num_workers=8) for x in modes}

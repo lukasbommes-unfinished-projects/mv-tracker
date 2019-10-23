@@ -56,14 +56,15 @@ class PropagationNetwork(nn.Module):
         x = self.base(motion_vectors)
         x = self.conv1x1(x)
 
+        boxes_prev_ = boxes_prev.detach().clone()
         if num_boxes_mask is not None:
-            boxes_prev = boxes_prev[num_boxes_mask]
-        boxes_prev = boxes_prev.view(-1, 5)
-        boxes_prev = self._change_box_format(boxes_prev)
-        boxes_prev = self._frame_idx_to_batch_idx(boxes_prev)
+            boxes_prev_ = boxes_prev_[num_boxes_mask]
+        boxes_prev_ = boxes_prev_.view(-1, 5)
+        boxes_prev_ = self._change_box_format(boxes_prev_)
+        boxes_prev_ = self._frame_idx_to_batch_idx(boxes_prev_)
 
         # compute ratio of input size to size of base output
-        x = torchvision.ops.ps_roi_pool(x, boxes_prev, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/16)
+        x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/16)
         x = self.pooling(x)
         x = x.squeeze()
         velocities_pred = x.view(-1, 4)

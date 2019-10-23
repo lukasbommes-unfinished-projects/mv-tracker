@@ -140,12 +140,11 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                 if (step + 1) % batch_size == 0:
 
                     # log loss and mean IoU of all predicted and ground truth boxes
-                    boxes_prev = boxes_prev[num_boxes_mask].detach()
-                    velocities_pred = velocities_pred.detach()
+                    boxes = boxes[num_boxes_mask].detach().view(-1, 5)
+                    boxes_prev = boxes_prev[num_boxes_mask].detach().view(-1, 5)
+                    velocities_pred = velocities_pred.detach().view(-1, 4)
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
-                    boxes = boxes[num_boxes_mask]
-                    boxes = boxes[:, 1:]
-                    mean_iou = compute_mean_iou(boxes_pred, boxes)
+                    mean_iou = compute_mean_iou(boxes_pred, boxes[:, 1:])
                     running_mean_iou.append(mean_iou)
 
                     if write_tensorboard_log:
@@ -212,6 +211,7 @@ def parse_args():
     return parser.parse_args()
 
 
+# make sure batch size of data in data_precomputed is 1, otherwise we get "CUDA out of memory"
 if __name__ == "__main__":
 
     args = parse_args()
@@ -241,5 +241,5 @@ if __name__ == "__main__":
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min',
     #    factor=0.1, patience=10, )
     train(model, criterion, optimizer, scheduler=scheduler, batch_size=args.batch_size,
-        num_epochs=120, visu=False, write_tensorboard_log=True,
-        save_model=True)
+        num_epochs=120, visu=True, write_tensorboard_log=True,
+        save_model=False)

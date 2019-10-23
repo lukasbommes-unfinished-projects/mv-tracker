@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import torch
 
-from lib.dataset.dataset import MotionVectorDataset
+from lib.dataset.dataset_new import MotionVectorDataset
 
 
 class RunningStats():
@@ -32,7 +32,16 @@ class RunningStats():
 # run as python -m lib.dataset.tools.compute_stats from root dir
 if __name__ == "__main__":
     visu = False  # whether to show graphical output (frame + motion vectors) or not
-    dataset_train = MotionVectorDataset(root_dir='data', batch_size=1, codec="mpeg4", visu=visu, mode="train")
+    codec = "mpeg4"
+    mvs_mode = "dense"
+    static_only = True
+    exclude_keyframes = True
+    scales = [1.0, 0.75, 0.5]
+
+    dataset_train = MotionVectorDataset(root_dir='data', transforms=None, codec=codec,
+        scales=scales, mvs_mode=mvs_mode, static_only=static_only,
+        exclude_keyframes=exclude_keyframes, visu=visu, debug=False, mode="train")
+
     dataloader_train = torch.utils.data.DataLoader(dataset_train, batch_size=1, shuffle=False, num_workers=0)
 
     step_wise = False
@@ -54,14 +63,10 @@ if __name__ == "__main__":
     for step, sample in enumerate(dataloader_train):
 
         motion_vectors = sample["motion_vectors"][0].numpy()
-        runnings_stats_mvs_x.update(np.mean(motion_vectors[:, :, 2]))
-        runnings_stats_mvs_y.update(np.mean(motion_vectors[:, :, 1]))
+        runnings_stats_mvs_x.update(np.mean(motion_vectors[0, :, :]))
+        runnings_stats_mvs_y.update(np.mean(motion_vectors[1, :, :]))
 
-        num_boxes_mask = sample["num_boxes_mask"]
-        velocities = sample["velocities"]
-        velocities = velocities[num_boxes_mask]
-        velocities = velocities.numpy()
-
+        velocities = sample["velocities"][0].numpy()
         for v_xc, v_yc, v_w, v_h in velocities:
             runnings_stats_vel_xc.update(v_xc)
             runnings_stats_vel_yc.update(v_yc)
@@ -69,6 +74,12 @@ if __name__ == "__main__":
             runnings_stats_vel_h.update(v_h)
 
         if visu:
+            motion_vectors = torch.from_numpy(motion_vectors)
+            motion_vectors = motion_vectors.permute(1, 2, 0)
+            motion_vectors = motion_vectors[..., [2, 1, 0]]
+            motion_vectors = motion_vectors.numpy()
+            motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
+
             print("step: {}, MVS shape: {}".format(step, motion_vectors.shape))
 
             cv2.imshow("frame", sample["frame"][0].numpy())
@@ -89,6 +100,8 @@ if __name__ == "__main__":
                         break
 
     # output finalized stats
+    print("codec = {}, mvs_mode = {}, static_only = {}, exclude_keyframes = {}, scales = {}".format(
+        codec, mvs_mode, static_only, exclude_keyframes, scales))
     print("mvs x -- mean: {}, variance: {}, std: {}".format(*runnings_stats_mvs_x.get_stats()))
     print("mvs y -- mean: {}, variance: {}, std: {}".format(*runnings_stats_mvs_y.get_stats()))
 
