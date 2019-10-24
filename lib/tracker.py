@@ -12,17 +12,20 @@ sys.path.append("..")
 from mvt import trackerlib
 from mvt.utils import draw_motion_vectors, draw_boxes
 
-from lib.models.pnet_upsampled import PropagationNetwork
+from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
+from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
-    normalize_vectors, motion_vectors_to_image
+    normalize_vectors, motion_vectors_to_image, motion_vectors_to_grid, \
+    motion_vectors_to_grid_interpolated
 from lib.dataset.velocities import box_from_velocities
-from lib.dataset.stats import Stats
 from lib.transforms.transforms import StandardizeMotionVectors, StandardizeVelocities
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, weights_file, device=None):
+    def __init__(self, iou_threshold, weights_file, mvs_mode, codec, stats, device=None):
         self.iou_threshold = iou_threshold
+        self.mvs_mode = mvs_mode
+        self.codec = codec
         if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         else:
@@ -33,15 +36,19 @@ class MotionVectorTracker:
         self.last_motion_vectors = torch.zeros(size=(1, 600, 1000, 3))
 
         self.standardize_motion_vectors = StandardizeMotionVectors(
-            mean=Stats.motion_vectors["mean"],
-            std=Stats.motion_vectors["std"])
+            mean=stats.motion_vectors["mean"],
+            std=stats.motion_vectors["std"])
         self.standardize_velocities = StandardizeVelocities(
-            mean=Stats.velocities["mean"],
-            std=Stats.velocities["std"],
+            mean=stats.velocities["mean"],
+            std=stats.velocities["std"],
             inverse=True)
 
         # load model and weigths
-        self.model = PropagationNetwork().to(self.device)
+        if self.mvs_mode == "upsampled":
+            self.model = PropagationNetworkUpsampled()
+        elif self.mvs_mode == "dense":
+            self.model = PropagationNetworkDense()
+        self.model = self.model.to(self.device)
         state_dict = torch.load(weights_file)
         # if model was trained with nn.DataParallel we need to alter the state dict
         if "module" in list(state_dict.keys())[0]:
@@ -98,8 +105,16 @@ class MotionVectorTracker:
             # preprocess motion vectors
             motion_vectors = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
             motion_vectors = normalize_vectors(motion_vectors)
-            motion_vectors = get_nonzero_vectors(motion_vectors)
-            motion_vectors = motion_vectors_to_image(motion_vectors, (frame_shape[1], frame_shape[0]))
+
+            if self.mvs_mode == "upsampled":
+                motion_vectors = get_nonzero_vectors(motion_vectors)
+                motion_vectors = motion_vectors_to_image(motion_vectors, (frame_shape[1], frame_shape[0]))
+            elif self.mvs_mode == "dense":
+                if self.codec == "mpeg4":
+                    motion_vectors = motion_vectors_to_grid(motion_vectors, (frame_shape[1], frame_shape[0]))
+                elif self.codec == "h264":
+                    motion_vectors = motion_vectors_to_grid_interpolated(motion_vectors, (frame_shape[1], frame_shape[0]))
+
             motion_vectors = torch.from_numpy(motion_vectors).float()
             motion_vectors = motion_vectors.unsqueeze(0)  # add batch dimension
 
@@ -126,10 +141,15 @@ class MotionVectorTracker:
 
         # feed into model, retrieve output
         with torch.set_grad_enabled(False):
-            velocities_pred = self.model(
-                self.last_motion_vectors.to(self.device),
-                boxes_prev.to(self.device),
-                None)
+            if self.mvs_mode == "upsampled":
+                velocities_pred = self.model(
+                    self.last_motion_vectors.to(self.device),
+                    boxes_prev.to(self.device),
+                    None)
+            elif self.mvs_mode == "dense":
+                velocities_pred = self.model(
+                    self.last_motion_vectors.to(self.device),
+                    boxes_prev.to(self.device))
 
             # make sure output is on CPU
             velocities_pred = velocities_pred.cpu()

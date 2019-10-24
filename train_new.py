@@ -4,6 +4,7 @@ import datetime
 import copy
 import argparse
 from tqdm import tqdm
+import logging
 
 import numpy as np
 import torch
@@ -37,23 +38,16 @@ def log_weights(model, epoch, writer):
 
 
 def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
-    write_tensorboard_log, save_model, date=None):
+    write_tensorboard_log, save_model, outdir, logger):
     tstart = time.time()
     if write_tensorboard_log:
         writer = SummaryWriter()
-
-    # create output directory
-    if save_model:
-        if date is None:
-            date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        outdir_name = os.path.join("models", "tracker", date)
-        os.makedirs(outdir_name, exist_ok=True)
 
     best_loss = 99999.0
     best_mean_iou = 0.0
     iterations = {"train": 0, "val": 0}
 
-    print("Weight sum before training: {}".format(weight_checksum(model)))
+    logger.info("Weight sum before training: {}".format(weight_checksum(model)))
 
     for epoch in range(num_epochs):
 
@@ -62,7 +56,7 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
         for param_group in optimizer.param_groups:
             learning_rate = param_group['lr']
 
-        print("Epoch {}/{} - Learning rate: {}".format(epoch, num_epochs-1, learning_rate))
+        logger.info("Epoch {}/{} - Learning rate: {}".format(epoch, num_epochs-1, learning_rate))
         if write_tensorboard_log:
             writer.add_scalar('Learning Rate', learning_rate, epoch)
 
@@ -151,7 +145,7 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
             # epoch loss and IoU
             epoch_loss = np.mean(running_loss)
             epoch_mean_iou = np.mean(running_mean_iou)
-            print('{} Loss: {}; {} Mean IoU: {}'.format(phase, epoch_loss, phase, epoch_mean_iou))
+            logger.info('{} Loss: {}; {} Mean IoU: {}'.format(phase, epoch_loss, phase, epoch_mean_iou))
             if write_tensorboard_log:
                 writer.add_scalar('Epoch Loss/{}'.format(phase), epoch_loss, epoch)
                 writer.add_scalar('Epoch Mean IoU/{}'.format(phase), epoch_mean_iou, epoch)
@@ -160,13 +154,13 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                 best_loss = epoch_loss
                 if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    torch.save(best_model_wts, os.path.join(outdir_name, "model_lowest_loss_epoch_{}.pth".format(epoch)))
+                    torch.save(best_model_wts, os.path.join(outdir, "model_lowest_loss_epoch_{}.pth".format(epoch)))
 
             if phase == "val" and epoch_mean_iou >= best_mean_iou:
                 best_mean_iou = epoch_mean_iou
                 if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    torch.save(best_model_wts, os.path.join(outdir_name, "model_highest_iou_epoch_{}.pth".format(epoch)))
+                    torch.save(best_model_wts, os.path.join(outdir, "model_highest_iou_epoch_{}.pth".format(epoch)))
 
         if scheduler:
             scheduler.step()
@@ -175,14 +169,14 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
             log_weights(model, epoch, writer)
 
     time_elapsed = time.time() - tstart
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    print('Lowest validation loss: {}'.format(best_loss))
+    logger.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    logger.info('Lowest validation loss: {}'.format(best_loss))
 
-    print("Weight sum after training: {}".format(weight_checksum(model)))
+    logger.info("Weight sum after training: {}".format(weight_checksum(model)))
 
     if save_model:
         best_model_wts = copy.deepcopy(model.state_dict())
-        torch.save(best_model_wts, os.path.join(outdir_name, "model_final.pth"))
+        torch.save(best_model_wts, os.path.join(outdir, "model_final.pth"))
 
     if write_tensorboard_log:
         writer.close()
@@ -204,9 +198,9 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=2)
     # training params
     parser.add_argument('--learning_rate', type=float, default=1e-4)
-    parser.add_argument('--num_epochs', type=int, default=600)
+    parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--weight_decay', type=float, default=0.0001)
-    parser.add_argument('--scheduler_frequency', type=int, default=100)
+    parser.add_argument('--scheduler_frequency', type=int, default=20)
     parser.add_argument('--scheduler_factor', type=float, default=0.1)
     parser.add_argument('--gpus', nargs='+', type=int, default=0)
     return parser.parse_args()
@@ -217,7 +211,18 @@ if __name__ == "__main__":
 
     args = parse_args()
 
+    # create output directory
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    outdir = os.path.join("models", "tracker", date)
+    os.makedirs(outdir, exist_ok=True)
+
+    # setup logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    logger.addHandler(ch)
+    fh = logging.FileHandler(os.path.join(outdir, 'train.log'))
+    logger.addHandler(fh)
 
     if isinstance(args.scales, float):
         args.scales = [args.scales]
@@ -225,22 +230,22 @@ if __name__ == "__main__":
     if isinstance(args.gpus, float):
         args.gpus = [args.gpus]
 
-    print("Model will be trained with the following options")
-    print(f"outdir: {os.path.join('models', 'tracker', date)}")
-    print(f"root_dir: {args.root_dir}")
-    print(f"codec: {args.codec}")
-    print(f"mvs_mode: {args.mvs_mode}")
-    print(f"scales: {args.scales}")
-    print(f"static_only: {args.static_only}")
-    print(f"with_keyframes: {args.with_keyframes}")
-    print(f"no_shuffle: {args.no_shuffle}")
-    print(f"batch_size: {args.batch_size}")
-    print(f"learning_rate: {args.learning_rate}")
-    print(f"num_epochs: {args.num_epochs}")
-    print(f"weight_decay: {args.weight_decay}")
-    print(f"scheduler_frequency: {args.scheduler_frequency}")
-    print(f"scheduler_factor: {args.scheduler_factor}")
-    print(f"gpus: {args.gpus}")
+    logger.info("Model will be trained with the following options")
+    logger.info(f"outdir: {outdir}")
+    logger.info(f"root_dir: {args.root_dir}")
+    logger.info(f"codec: {args.codec}")
+    logger.info(f"mvs_mode: {args.mvs_mode}")
+    logger.info(f"scales: {args.scales}")
+    logger.info(f"static_only: {args.static_only}")
+    logger.info(f"with_keyframes: {args.with_keyframes}")
+    logger.info(f"no_shuffle: {args.no_shuffle}")
+    logger.info(f"batch_size: {args.batch_size}")
+    logger.info(f"learning_rate: {args.learning_rate}")
+    logger.info(f"num_epochs: {args.num_epochs}")
+    logger.info(f"weight_decay: {args.weight_decay}")
+    logger.info(f"scheduler_frequency: {args.scheduler_frequency}")
+    logger.info(f"scheduler_factor: {args.scheduler_factor}")
+    logger.info(f"gpus: {args.gpus}")
 
     transforms = {
         "train": torchvision.transforms.Compose([
@@ -275,14 +280,16 @@ if __name__ == "__main__":
         eps=1e-08, weight_decay=args.weight_decay, amsgrad=False)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.scheduler_frequency, gamma=args.scheduler_factor)
 
-    print(f"model: {model}")
-    print(f"model requires_grad: {[p.requires_grad for p in model.parameters()]}")
-    print(f"model param count: {count_params(model)}")
+    logger.info(f"model: {model}")
+    logger.info(f"model requires_grad: {[p.requires_grad for p in model.parameters()]}")
+    logger.info(f"model param count: {count_params(model)}")
 
-    print(f"loss criterion: {criterion}")
-    print(f"optimizer: {optimizer}")
-    print(f"transforms: {transforms['train']}")
+    logger.info(f"loss criterion: {criterion}")
+    logger.info(f"optimizer: {optimizer}")
+    logger.info(f"transforms: {transforms['train']}")
 
-    train(model, criterion, optimizer, scheduler=None, batch_size=args.batch_size,
-        num_epochs=args.num_epochs, write_tensorboard_log=False,
-        save_model=False)
+    #logger.info("Scheduler: None (ignore scheduler options above)")
+
+    train(model, criterion, optimizer, scheduler=scheduler, batch_size=args.batch_size,
+        num_epochs=args.num_epochs, write_tensorboard_log=True,
+        save_model=True, outdir=outdir, logger=logger)

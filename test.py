@@ -13,6 +13,7 @@ from detector import DetectorTF
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
+from lib.dataset.stats import StatsMpeg4DenseStatic as Stats
 
 
 if __name__ == "__main__":
@@ -25,22 +26,26 @@ if __name__ == "__main__":
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
     detector_interval = 20
-    tracker_weights_file = "models/tracker/2019-10-21_17-32-25/model_final.pth" #2019-10-16_09-24-32/model_lowest_loss.pth"
     tracker_iou_thres = 0.05
 
-    scaling_factor = 1.0
+    tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres)
+    #tracker_deep = MotionVectorTrackerDeepUpsampled(iou_threshold=tracker_iou_thres,
+    #    weights_file="models/tracker/2019-10-16_09-24-32/model_lowest_loss.pth")
+    tracker_deep = MotionVectorTrackerDeep(
+        iou_threshold=tracker_iou_thres,
+        weights_file="models/tracker/2019-10-24_07-31-19/model_highest_iou_epoch_22.pth",
+        mvs_mode="dense",
+        codec="mpeg4",
+        stats=Stats,
+        device=torch.device("cuda:1"))
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
 
     detector = DetectorTF(path=detector_path,
                         box_size_threshold=detector_box_size_thres,
-                        scaling_factor=scaling_factor,
+                        scaling_factor=1.0,
                         gpu=0)
-
-    tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres)
-    tracker_deep = MotionVectorTrackerDeep(iou_threshold=tracker_iou_thres,
-        weights_file=tracker_weights_file)
 
     cap = VideoCap()
 
