@@ -65,6 +65,11 @@ class StandardizeMotionVectors:
         sample_transformed["motion_vectors"] = motion_vectors
         return sample_transformed
 
+    def __repr__(self):
+        repr = "StandardizeMotionVectors (\n    mean={},\n    std={}\n)".format(
+            [float(val) for val in self.mean], [float(val) for val in self.std])
+        return repr
+
 
 class StandardizeVelocities:
     """Subtracts mean from velocities and divides by standard deviation.
@@ -96,6 +101,11 @@ class StandardizeVelocities:
         sample_transformed = copy.deepcopy(sample)
         sample_transformed["velocities"] = velocities
         return sample_transformed
+
+    def __repr__(self):
+        repr = "StandardizeVelocities (\n    mean={},\n    std={}\n)".format(
+            [float(val) for val in self.mean], [float(val) for val in self.std])
+        return repr
 
 
 def scale_image_(image, scale=600, max_size=1000):
@@ -183,6 +193,12 @@ class ScaleImage:
             sample_transformed["scaling_factor"] = scaling_factor
         return sample_transformed
 
+    def __repr__(self):
+        repr = ("ScaleImage (\n    items={},\n    scale={},\n    max_size={},\n"
+                "    return_scale={},\n    scale_boxes={}\n)").format(self.items,
+                self.scale, self.max_size, self.return_scale, self.scale_boxes)
+        return repr
+
 
 class RandomScaleImage:
     """Scale motion vector or frame by a randomly chosen scale.
@@ -236,6 +252,12 @@ class RandomScaleImage:
         if self.return_scale:
             sample_transformed["scaling_factor"] = scaling_factor
         return sample_transformed
+
+    def __repr__(self):
+        repr = ("RandomScaleImage (\n    items={},\n    scales={},\n    max_size={},\n"
+                "    return_scale={},\n    scale_boxes={}\n)").format(self.items,
+                self.scales, self.max_size, self.return_scale, self.scale_boxes)
+        return repr
 
 
 def flip_motion_vectors_(motion_vectors, direction):
@@ -352,6 +374,9 @@ class Flip:
         flip_(sample, sample_transformed, direction=self.direction)
         return sample_transformed
 
+    def __repr__(self):
+        return "Flip (direction={})".format(self.direction)
+
 
 class RandomFlip:
     """Randomly flips motion vectors, boxes and velocities.
@@ -375,6 +400,9 @@ class RandomFlip:
             if random.choice([True, False]):  # 50 percent chance that flip happens
                 flip_(sample, sample_transformed, direction=direction)
         return sample_transformed
+
+    def __repr__(self):
+        return "RandomFlip (directions={})".format(self.directions)
 
 
 class RandomMotionChange:
@@ -411,3 +439,6 @@ class RandomMotionChange:
         sample_transformed["motion_vectors"][..., 2] += x_rand
         sample_transformed["motion_vectors"][..., 1] += y_rand
         return sample_transformed
+
+    def __repr__(self):
+        return "RandomMotionChange (scale={})".format(self.scale)

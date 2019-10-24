@@ -20,6 +20,32 @@ def load_pretrained_weights_to_modified_resnet(cnn_model, pretrained_weights):
     cnn_model.load_state_dict(pre_dict)
 
 
+def count_params(model):
+    """Return the number of parameters in the model."""
+    params = list(model.parameters())
+    count = 0
+    for p in params:
+        count += p.flatten().shape[0]
+    return count
+
+
+def weight_checksum(model):
+    """Return the sum of all model parameters."""
+    checksum = 0
+    for p in model.parameters():
+        s = p.data.sum().detach().cpu().numpy()
+        checksum += s
+    return checksum
+
+
+def change_box_format(boxes):
+    """Alters the box format from [(idx), xmin, ymin, w, h] to [(idx), x1, y1, x2, y2]."""
+    boxes_ = boxes.clone()
+    boxes_[:, -2] = boxes_[:, -2] + boxes_[:, -4]
+    boxes_[:, -1] = boxes_[:, -1] + boxes_[:, -3]
+    return boxes_
+
+
 def compute_mean_iou(boxes_pred, boxes):
     """Compute the mean IoUs of all predicted and ground truth boxes
 
@@ -37,9 +63,7 @@ def compute_mean_iou(boxes_pred, boxes):
         (`float`) The mean of the IoUs of all N boxes.
     """
     # change format from (xmin, ymin, w, h) to (xmin, ymin, xmax, ymax)
-    boxes_pred[:, 2] = boxes_pred[:, 0] + boxes_pred[:, 2]
-    boxes_pred[:, 3] = boxes_pred[:, 1] + boxes_pred[:, 3]
-    boxes[:, 2] = boxes[:, 0] + boxes[:, 2]
-    boxes[:, 3] = boxes[:, 1] + boxes[:, 3]
-    mean_iou = torchvision.ops.boxes.box_iou(boxes_pred, boxes).diag().mean()
+    boxes_pred_ = change_box_format(boxes_pred)
+    boxes_ = change_box_format(boxes)
+    mean_iou = torchvision.ops.boxes.box_iou(boxes_pred_, boxes_).diag().mean()
     return float(mean_iou)
