@@ -143,6 +143,7 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                     boxes = boxes[num_boxes_mask].detach().view(-1, 5)
                     boxes_prev = boxes_prev[num_boxes_mask].detach().view(-1, 5)
                     velocities_pred = velocities_pred.detach().view(-1, 4)
+                    # TODO: Verify that velocities are denormlized before computing the boxes
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
                     mean_iou = compute_mean_iou(boxes_pred, boxes[:, 1:])
                     running_mean_iou.append(mean_iou)

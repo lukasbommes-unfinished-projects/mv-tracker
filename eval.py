@@ -14,6 +14,7 @@ from lib.dataset.loaders import load_detections
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
+from lib.dataset.stats import StatsMpeg4UpsampledFull
 
 
 def parse_args():
@@ -33,7 +34,7 @@ In case of the baseline tracker `x` in the above path is ommited. For the deep
 trackers, this is the weights file used in the evaluation.
 
 Example usage:
-python eval.py MOT17 train mpeg4 deep 0.1 4 --deep_tracker_weights_file=models/tracker/14_10_2019_01.pth --root_dir=data
+python eval.py MOT17 train mpeg4 deep 0.1 4 --deep_tracker_weights_file=models/tracker/14_10_2019_01.pth --root_dir=data --gpu 0
 """, formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('benchmark', type=str, help='Either "MOT16" or "MOT17". Determines which detections are loaded.', default='MOT17')
@@ -44,6 +45,7 @@ python eval.py MOT17 train mpeg4 deep 0.1 4 --deep_tracker_weights_file=models/t
     parser.add_argument('detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
     parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
     parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
+    parser.add_argument('--gpu', type=int, help='Index of the GPU on which to run inference of deep tracker. Pass -1 to run on CPU.', default=0)
     return parser.parse_args()
 
 
@@ -60,7 +62,7 @@ if __name__ == "__main__":
             args.tracker_type, "iou-thres-{}".format(args.tracker_iou_thres),
             "det-interval-{}".format(args.detector_interval))
     elif args.tracker_type == "deep":
-        weights_file_name = str.split(args.deep_tracker_weights_file, "/")[-1][:-4]  # remove ".pth"
+        weights_file_name = str.split(args.deep_tracker_weights_file, "/")[-2]  # pick out the datetime
         output_directory = os.path.join('eval_output', args.benchmark, args.mode, args.codec,
             args.tracker_type, weights_file_name,
             "iou-thres-{}".format(args.tracker_iou_thres),
@@ -102,20 +104,30 @@ if __name__ == "__main__":
             # get the video file from FRCNN sub directory
             sequence_name_without_detector = '-'.join(sequence_name.split('-')[:-1])
             sequence_name_frcnn = "{}-FRCNN".format(sequence_name_without_detector)
-            video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}.mp4".format(sequence_name_frcnn, args.codec))
+            video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}-1.0.mp4".format(sequence_name_frcnn, args.codec))
 
         else:
-            video_file = os.path.join(data_dir, "{}-{}.mp4".format(sequence_name, args.codec))
+            video_file = os.path.join(data_dir, "{}-{}-1.0.mp4".format(sequence_name, args.codec))
 
         print("Loading video file from", video_file)
+
+        if args.gpu == -1:
+            device = torch.device("cpu")
+        else:
+            device = torch.device("cuda:{}".format(args.gpu))
 
         # init tracker
         if args.tracker_type == "baseline":
             tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres)
-
         elif args.tracker_type == "deep":
-            tracker = MotionVectorTrackerDeep(iou_threshold=args.tracker_iou_thres,
-                weights_file=args.deep_tracker_weights_file, device=torch.device("cpu"))
+            tracker = MotionVectorTrackerDeep(
+                iou_threshold=args.tracker_iou_thres,
+                weights_file=args.deep_tracker_weights_file,
+                mvs_mode="upsampled",
+                codec="mpeg4",
+                stats=StatsMpeg4UpsampledFull,
+                device=device)
+            # TODO: Add other tracker models here
 
         print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
 

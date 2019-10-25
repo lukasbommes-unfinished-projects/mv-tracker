@@ -13,8 +13,10 @@ from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vector
     normalize_vectors, motion_vectors_to_image, motion_vectors_to_grid, \
     motion_vectors_to_grid_interpolated
 from lib.dataset.velocities import velocities_from_boxes
-from lib.dataset.stats import StatsMpeg4DenseStatic as Stats
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
+
+# for testing
+from lib.dataset.stats import StatsMpeg4DenseStaticMultiscale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 

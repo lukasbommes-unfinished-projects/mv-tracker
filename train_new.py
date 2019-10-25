@@ -15,7 +15,7 @@ import torchvision
 
 from lib.models.pnet_dense import PropagationNetwork, layer_keys
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsMpeg4DenseStatic as Stats
+from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -42,11 +42,6 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
     tstart = time.time()
     if write_tensorboard_log:
         writer = SummaryWriter()
-
-    standardize_velocities = StandardizeVelocities(
-        mean=Stats.velocities["mean"],
-        std=Stats.velocities["std"],
-        inverse=True)
 
     best_loss = 99999.0
     best_mean_iou = 0.0
@@ -143,8 +138,7 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                     boxes = boxes.detach().cpu().view(-1, 5)
                     boxes_prev = boxes_prev.detach().cpu().view(-1, 5)
                     velocities_pred = velocities_pred.detach().cpu().view(-1, 4)
-                    sample = standardize_velocities({"velocities": velocities_pred})
-                    velocities_pred = sample["velocities"]
+                    # velocities are already denormlized so we can directly predict boxes
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
                     mean_iou = compute_mean_iou(boxes_pred, boxes[:, 1:])
                     running_mean_iou.append(mean_iou)
@@ -182,6 +176,15 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
 
         if scheduler:
             scheduler.step()
+
+        logger.info("velocities {}".format(velocities))
+        velocities_mean = torch.tensor(Stats.velocities["mean"]).to(device)
+        velocities_std = torch.tensor(Stats.velocities["std"]).to(device)
+        velocities_pred = (velocities_pred - velocities_mean) / velocities_std
+        logger.info("velocities_pred {}".format(velocities_pred))
+        logger.info("boxes_prev {}".format(boxes_prev))
+        logger.info("boxes {}".format(boxes))
+        logger.info("boxes_pred {}".format(boxes_pred))
 
         if write_tensorboard_log:
             log_weights(model, epoch, writer)
@@ -227,9 +230,9 @@ def parse_args():
 # make sure batch size of data in data_precomputed is 1, otherwise we get "CUDA out of memory"
 if __name__ == "__main__":
 
-    log_to_file = True
-    save_model = True
-    write_tensorboard_log = True
+    log_to_file = False
+    save_model = False
+    write_tensorboard_log = False
 
     args = parse_args()
     if isinstance(args.scales, float):
