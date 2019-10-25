@@ -9,7 +9,7 @@ from video_cap import VideoCap
 from lib.dataset.loaders import load_detections
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
     normalize_vectors, motion_vectors_to_image
-from lib.dataset.stats import Stats
+from lib.dataset.stats import StatsMpeg4UpsampledFull as Stats
 from lib.visu import draw_boxes, draw_motion_vectors
 from lib.transforms.transforms import StandardizeMotionVectors, ScaleImage
 

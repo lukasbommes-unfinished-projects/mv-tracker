@@ -4,7 +4,7 @@ import torch
 
 from lib.visu import draw_boxes
 from lib.dataset.velocities import box_from_velocities
-from lib.dataset.stats import Stats
+from lib.dataset.stats import StatsMpeg4UpsampledFull as Stats
 from lib.transforms.transforms import StandardizeVelocities
 
 

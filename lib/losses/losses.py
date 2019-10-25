@@ -16,4 +16,4 @@ class IouLoss(nn.Module):
         return loss
 
     def __repr__(self):
-        return "IouLoss ()"
+        return "IouLoss()"

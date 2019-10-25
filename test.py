@@ -13,7 +13,8 @@ from detector import DetectorTF
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
-from lib.dataset.stats import StatsMpeg4DenseStatic as Stats
+from lib.dataset.stats import StatsMpeg4UpsampledStatic, \
+    StatsMpeg4UpsampledFull, StatsMpeg4DenseStatic
 
 
 if __name__ == "__main__":
@@ -29,15 +30,20 @@ if __name__ == "__main__":
     tracker_iou_thres = 0.05
 
     tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres)
-    #tracker_deep = MotionVectorTrackerDeepUpsampled(iou_threshold=tracker_iou_thres,
-    #    weights_file="models/tracker/2019-10-16_09-24-32/model_lowest_loss.pth")
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-10-24_07-31-19/model_highest_iou_epoch_22.pth",
-        mvs_mode="dense",
+        weights_file="models/tracker/2019-10-23_09-25-34/model_final.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
+        mvs_mode="upsampled",
         codec="mpeg4",
-        stats=Stats,
-        device=torch.device("cuda:1"))
+        stats=StatsMpeg4UpsampledFull,
+        device=torch.device("cuda:0"))
+    # tracker_deep = MotionVectorTrackerDeep(
+    #     iou_threshold=tracker_iou_thres,
+    #     weights_file="models/tracker/2019-10-24_09-26-27/model_final.pth",
+    #     mvs_mode="dense",
+    #     codec="mpeg4",
+    #     stats=StatsMpeg4DenseStatic,
+    #     device=torch.device("cuda:0"))
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)

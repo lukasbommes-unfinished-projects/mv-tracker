@@ -7,7 +7,7 @@ import torchvision
 
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, ScaleImage, RandomScaleImage, RandomFlip, RandomMotionChange
-from lib.dataset.stats import Stats
+from lib.dataset.stats import StatsMpeg4UpsampledFull as Stats
 from lib.visu import draw_boxes, draw_velocities
 
 

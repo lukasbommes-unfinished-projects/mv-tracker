@@ -43,6 +43,11 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
     if write_tensorboard_log:
         writer = SummaryWriter()
 
+    standardize_velocities = StandardizeVelocities(
+        mean=Stats.velocities["mean"],
+        std=Stats.velocities["std"],
+        inverse=True)
+
     best_loss = 99999.0
     best_mean_iou = 0.0
     iterations = {"train": 0, "val": 0}
@@ -87,19 +92,29 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
 
                 with torch.set_grad_enabled(phase == "train"):
 
-                    velocities = velocities.view(-1, 4)
-                    velocities_pred = model(motion_vectors, boxes_prev)
-
                     boxes_prev = boxes_prev.view(-1, 5)
                     boxes = boxes.view(-1, 5)
+                    velocities = velocities.view(-1, 4)
 
-                    # undo normlization of velocity before predicting the boxes
+                    velocities_pred = model(motion_vectors, boxes_prev)
+
+                    criterion_iou, criterion_velocity = criterion
+
+                    # compute loss for velocities
+                    loss_velocities = criterion_velocity(velocities_pred, velocities)
+
+                    # undo normalization of velocity and predict boxes
                     velocities_mean = torch.tensor(Stats.velocities["mean"]).to(device)
                     velocities_std = torch.tensor(Stats.velocities["std"]).to(device)
-                    velocities = velocities * velocities_std + velocities_mean
-
+                    velocities_pred = velocities_pred * velocities_std + velocities_mean
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
-                    loss = criterion(boxes_pred, boxes[:, 1:])
+
+                    # compute loss for box IoU
+                    loss_iou = criterion_iou(boxes_pred, boxes[:, 1:])
+                    loss = loss_velocities + loss_iou
+
+                    # log loss ratio
+                    loss_ratio = loss_velocities.item() / loss_iou.item()
 
                     if phase == "train":
                         if write_tensorboard_log:
@@ -125,9 +140,11 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                 if (step + 1) % batch_size == 0:
 
                     # log loss and mean IoU of all predicted and ground truth boxes
-                    boxes = boxes.detach().view(-1, 5)
-                    boxes_prev = boxes_prev.detach().view(-1, 5)
-                    velocities_pred = velocities_pred.detach().view(-1, 4)
+                    boxes = boxes.detach().cpu().view(-1, 5)
+                    boxes_prev = boxes_prev.detach().cpu().view(-1, 5)
+                    velocities_pred = velocities_pred.detach().cpu().view(-1, 4)
+                    sample = standardize_velocities({"velocities": velocities_pred})
+                    velocities_pred = sample["velocities"]
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
                     mean_iou = compute_mean_iou(boxes_pred, boxes[:, 1:])
                     running_mean_iou.append(mean_iou)
@@ -135,6 +152,7 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                     if write_tensorboard_log:
                         writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
                         writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
+                        writer.add_scalar('Loss Ratio/{}'.format(phase), loss_ratio, iterations[phase])
 
                     iterations[phase] += 1
 
@@ -154,13 +172,13 @@ def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
                 best_loss = epoch_loss
                 if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    torch.save(best_model_wts, os.path.join(outdir, "model_lowest_loss_epoch_{}.pth".format(epoch)))
+                    torch.save(best_model_wts, os.path.join(outdir, "model_lowest_loss.pth"))
 
             if phase == "val" and epoch_mean_iou >= best_mean_iou:
                 best_mean_iou = epoch_mean_iou
                 if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    torch.save(best_model_wts, os.path.join(outdir, "model_highest_iou_epoch_{}.pth".format(epoch)))
+                    torch.save(best_model_wts, os.path.join(outdir, "model_highest_iou.pth"))
 
         if scheduler:
             scheduler.step()
@@ -195,7 +213,7 @@ def parse_args():
     parser.set_defaults(with_keyframes=False)
     parser.add_argument('--no_shuffle', dest='no_shuffle', action='store_true')
     parser.set_defaults(no_shuffle=False)
-    parser.add_argument('--batch_size', type=int, default=2)
+    parser.add_argument('--batch_size', type=int, default=8)
     # training params
     parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--num_epochs', type=int, default=100)
@@ -209,26 +227,30 @@ def parse_args():
 # make sure batch size of data in data_precomputed is 1, otherwise we get "CUDA out of memory"
 if __name__ == "__main__":
 
+    log_to_file = True
+    save_model = True
+    write_tensorboard_log = True
+
     args = parse_args()
+    if isinstance(args.scales, float):
+        args.scales = [args.scales]
+    if isinstance(args.gpus, int):
+        args.gpus = [args.gpus]
 
     # create output directory
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     outdir = os.path.join("models", "tracker", date)
-    os.makedirs(outdir, exist_ok=True)
+    if log_to_file or save_model:
+        os.makedirs(outdir, exist_ok=True)
 
     # setup logging
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     logger.addHandler(ch)
-    fh = logging.FileHandler(os.path.join(outdir, 'train.log'))
-    logger.addHandler(fh)
-
-    if isinstance(args.scales, float):
-        args.scales = [args.scales]
-
-    if isinstance(args.gpus, float):
-        args.gpus = [args.gpus]
+    if log_to_file:
+        fh = logging.FileHandler(os.path.join(outdir, 'train.log'))
+        logger.addHandler(fh)
 
     logger.info("Model will be trained with the following options")
     logger.info(f"outdir: {outdir}")
@@ -249,10 +271,10 @@ if __name__ == "__main__":
 
     transforms = {
         "train": torchvision.transforms.Compose([
-            #RandomFlip(directions=["x", "y"]),
+            RandomFlip(directions=["x", "y"]),
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
-            #RandomMotionChange(scale=1.0),
+            RandomMotionChange(scale=1.0),
         ]),
         "val": torchvision.transforms.Compose([
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
@@ -269,13 +291,14 @@ if __name__ == "__main__":
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=1,
         shuffle=(not args.no_shuffle), num_workers=12) for x in modes}
 
+    device = torch.device("cuda:{}".format(args.gpus[0]) if torch.cuda.is_available() else "cpu")
+
     model = PropagationNetwork()
     if len(args.gpus) > 1 and torch.cuda.device_count() > 1:
         model = nn.DataParallel(model, device_ids=args.gpus)
-    device = torch.device("cuda:{}".format(args.gpus[0]) if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
-    criterion = IouLoss()
+    criterion = (IouLoss(), nn.SmoothL1Loss(reduction='mean'))
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.999),
         eps=1e-08, weight_decay=args.weight_decay, amsgrad=False)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.scheduler_frequency, gamma=args.scheduler_factor)
@@ -288,8 +311,6 @@ if __name__ == "__main__":
     logger.info(f"optimizer: {optimizer}")
     logger.info(f"transforms: {transforms['train']}")
 
-    #logger.info("Scheduler: None (ignore scheduler options above)")
-
     train(model, criterion, optimizer, scheduler=scheduler, batch_size=args.batch_size,
-        num_epochs=args.num_epochs, write_tensorboard_log=True,
-        save_model=True, outdir=outdir, logger=logger)
+        num_epochs=args.num_epochs, write_tensorboard_log=write_tensorboard_log,
+        save_model=save_model, outdir=outdir, logger=logger)

@@ -147,9 +147,11 @@ class MotionVectorTracker:
                     boxes_prev.to(self.device),
                     None)
             elif self.mvs_mode == "dense":
+                boxes_prev_ = boxes_prev.clone()
+                boxes_prev_ = boxes_prev_ / 16.0
                 velocities_pred = self.model(
                     self.last_motion_vectors.to(self.device),
-                    boxes_prev.to(self.device))
+                    boxes_prev_.to(self.device))
 
             # make sure output is on CPU
             velocities_pred = velocities_pred.cpu()

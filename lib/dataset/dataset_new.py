@@ -208,13 +208,20 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         for sequence_idx, sequence in enumerate(self.sequences[self.mode]):
             for scale_idx in range(len(self.scales)):
                 last_none = True
-                for frame_idx, gt_id in enumerate(self.gt_ids[sequence_idx]):
+                for frame_idx in range(len(self.gt_ids[sequence_idx])):
+                    gt_ids = self.gt_ids[sequence_idx][frame_idx]
+                    gt_ids_prev = self.gt_ids[sequence_idx][frame_idx - 1]
                     # exclude frames without gt annotation from index
-                    if gt_id is None:
+                    if gt_ids is None:
                         last_none = True
                         continue
                     if last_none:
                         last_none = False
+                        continue
+                    # check if ids can be matched, otherwise exclude frame
+                    _, idx_1, idx_0 = np.intersect1d(gt_ids, gt_ids_prev,
+                        assume_unique=True, return_indices=True)
+                    if len(idx_1) == 0 and len(idx_0) == 0:
                         continue
                     # exclude key frames from index
                     if self.exclude_keyframes:
@@ -333,7 +340,7 @@ if __name__ == "__main__":
     batch_size = 1
     codec = "mpeg4"
     mvs_mode = "dense"
-    static_only = True
+    static_only = False
     exclude_keyframes = True
     scales = [1.0, 0.75, 0.5]
 
@@ -343,8 +350,6 @@ if __name__ == "__main__":
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
             StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
             RandomMotionChange(scale=1.0),
-            #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000),
-            #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920),
         ]),
         "val": torchvision.transforms.Compose([
             StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
