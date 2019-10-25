@@ -230,9 +230,9 @@ def parse_args():
 # make sure batch size of data in data_precomputed is 1, otherwise we get "CUDA out of memory"
 if __name__ == "__main__":
 
-    log_to_file = False
-    save_model = False
-    write_tensorboard_log = False
+    log_to_file = True
+    save_model = True
+    write_tensorboard_log = True
 
     args = parse_args()
     if isinstance(args.scales, float):

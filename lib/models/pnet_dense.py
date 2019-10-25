@@ -60,7 +60,8 @@ class PropagationNetwork(nn.Module):
         boxes_prev_ = change_box_format(boxes_prev)
 
         # compute ratio of input size to size of base output
-        x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/16)
+        # spatial scale is only 1/8, because first layer has kernel size 3 instead of 7 as in the upsampled model
+        x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/8)
         x = self.pooling(x)
         x = x.squeeze()
         velocities_pred = x.view(-1, 4)
