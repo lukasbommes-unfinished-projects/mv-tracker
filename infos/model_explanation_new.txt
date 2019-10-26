@@ -1,0 +1,36 @@
+2019-10-26_16-40-36 As 2019-10-26_16-36-23, but changed using scales [1.0, 0.75, 0.5] istead of 1.0 only
+
+2019-10-26_16-36-23 Realized that train code was buggy in 2019-10-26_05-07-47 and 2019-10-26_05-06-48, velocities were denormalized prior to comptuing loss. Rerun with same settings as 2019-10-26_05-07-47, but bug fixed.
+
+2019-10-26_05-07-47 Changed scheduler to 40, 0.1 and train for 160 epochs with initial lr 1e-4 and loss_velocities, batch size still 32
+-> test performance is very bad, boxes move much too fast (train code had bug)
+
+2019-10-26_05-06-48 As 2019-10-25_18-13-14, but switched back to "loss_velocities", batch size is still 32 as it showed less overfitting
+-> test performance is very bad, boxes move much too fast (train code had bug)
+
+2019-10-25_18-13-14 Same as 2019-10-25_14-45-23, only batch size changed from 8 to 32
+-> overfits a lot less than with batch sizes 2 or 8
+-> test performance is not so good because boxes do not move enough
+
+2019-10-25_17-29-40 Same as 2019-10-25_14-45-23, only batch size changed from 8 to 2
+-> strong overfitting occurs, training crashed due to another problem
+-> test performance is bad because boxes do not move enough
+
+2019-10-25_14-45-23 Same as 2019-10-25_12-34-44, only initial learning rate is 1e-5 instead of 1e-4
+-> overfitting occurs
+-> test performance is not good, boxes move in wrong directions and with wrong speeds
+
+2019-10-25_12-34-44 Same settings as 2019-10-25_03-41-31 because test performance was promising. Different from old model is the multi-task loss and the corrected scaling inside the model pnet_dense.
+
+2019-10-25_09-08-15	Realized that model (dense) was faulty (spatial scale of PS ROI Pool was 1/16, but it should be 1/8 instead. Changed scheduler to update only every 40 steps.
+-> model diverged during training, test performance not assessed yet
+
+2019-10-25_05-21-33	As before, but switched to multi-task loss (velocity + IoU Loss), added random flips and motion scale for regularization
+-> test performance is significantly worse than 2019-10-25_03-41-31
+
+2019-10-25_03-41-31	Dense model + scheduler, no regularization, switched from velocity loss to IoU loss, IoU output is buggy, because velocity_pred was falsely denormalized twice
+-> test performance is already okay, boxes move significantly
+
+2019-10-24_09-26-27	Dense model, this time with scheduler activated
+
+2019-10-24_07-31-19	First experiment with dense model and train_new script, no scheduler

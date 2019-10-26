@@ -15,7 +15,7 @@ import torchvision
 
 from lib.models.pnet_dense import PropagationNetwork, layer_keys
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsMpeg4DenseStaticMultiscale as Stats
+from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -37,16 +37,11 @@ def log_weights(model, epoch, writer):
         writer.add_histogram(key, weights, global_step=epoch, bins='tensorflow')
 
 
-def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
+def train(model, criterion, optimizer, scheduler, batch_size, num_epochs,
     write_tensorboard_log, save_model, outdir, logger):
     tstart = time.time()
     if write_tensorboard_log:
         writer = SummaryWriter()
-
-    if loss_type == "loss_velocities" or loss_type == "loss_multitask":
-        criterion_velocity = nn.SmoothL1Loss(reduction='mean')
-    if loss_type == "loss_iou" or loss_type == "":
-        criterion_iou = IouLoss()
 
     best_loss = 99999.0
     best_mean_iou = 0.0
@@ -98,27 +93,23 @@ def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
 
                     velocities_pred = model(motion_vectors, boxes_prev)
 
-                    # compute velocities loss
-                    if loss_type == "loss_velocities" or loss_type == "loss_multitask":
-                        loss_velocities = criterion_velocity(velocities_pred, velocities)
+                    criterion_iou, criterion_velocity = criterion
 
-                    # undo normalization (do that here because mean IoU logging below also needs unnormalized velocities)
+                    # compute loss for velocities
+                    loss_velocities = criterion_velocity(velocities_pred, velocities)
+
+                    # undo normalization of velocity and predict boxes
                     velocities_mean = torch.tensor(Stats.velocities["mean"]).to(device)
                     velocities_std = torch.tensor(Stats.velocities["std"]).to(device)
                     velocities_pred = velocities_pred * velocities_std + velocities_mean
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
 
-                    # compute box IoU loss
-                    if loss_type == "loss_iou" or loss_type == "loss_multitask":
-                        loss_iou = criterion_iou(boxes_pred, boxes[:, 1:])
+                    # compute loss for box IoU
+                    loss_iou = criterion_iou(boxes_pred, boxes[:, 1:])
+                    loss = loss_velocities + loss_iou
 
-                    if loss_type == "loss_multitask":
-                        loss = loss_velocities + loss_iou
-                        loss_ratio = loss_velocities.item() / loss_iou.item()  # log loss ratio
-                    elif loss_type == "loss_velocities":
-                        loss = loss_velocities
-                    elif loss_type == "loss_iou":
-                        loss = loss_iou
+                    # log loss ratio
+                    loss_ratio = loss_velocities.item() / loss_iou.item()
 
                     if phase == "train":
                         if write_tensorboard_log:
@@ -155,8 +146,7 @@ def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
                     if write_tensorboard_log:
                         writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
                         writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
-                        if loss_type == "multi-task":
-                            writer.add_scalar('Loss Ratio/{}'.format(phase), loss_ratio, iterations[phase])
+                        writer.add_scalar('Loss Ratio/{}'.format(phase), loss_ratio, iterations[phase])
 
                     iterations[phase] += 1
 
@@ -231,7 +221,6 @@ def parse_args():
     parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--weight_decay', type=float, default=0.0001)
-    parser.add_argument('--loss_type', type=str, default="loss_velocities")
     parser.add_argument('--scheduler_frequency', type=int, default=20)
     parser.add_argument('--scheduler_factor', type=float, default=0.1)
     parser.add_argument('--gpus', nargs='+', type=int, default=0)
@@ -279,7 +268,6 @@ if __name__ == "__main__":
     logger.info(f"learning_rate: {args.learning_rate}")
     logger.info(f"num_epochs: {args.num_epochs}")
     logger.info(f"weight_decay: {args.weight_decay}")
-    logger.info(f"loss_type: {args.loss_type}")
     logger.info(f"scheduler_frequency: {args.scheduler_frequency}")
     logger.info(f"scheduler_factor: {args.scheduler_factor}")
     logger.info(f"gpus: {args.gpus}")
@@ -313,6 +301,7 @@ if __name__ == "__main__":
         model = nn.DataParallel(model, device_ids=args.gpus)
     model = model.to(device)
 
+    criterion = (IouLoss(), nn.SmoothL1Loss(reduction='mean'))
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.999),
         eps=1e-08, weight_decay=args.weight_decay, amsgrad=False)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.scheduler_frequency, gamma=args.scheduler_factor)
@@ -321,9 +310,10 @@ if __name__ == "__main__":
     logger.info(f"model requires_grad: {[p.requires_grad for p in model.parameters()]}")
     logger.info(f"model param count: {count_params(model)}")
 
+    logger.info(f"loss criterion: {criterion}")
     logger.info(f"optimizer: {optimizer}")
     logger.info(f"transforms: {transforms['train']}")
 
-    train(model, optimizer, loss_type=args.loss_type, scheduler=scheduler, batch_size=args.batch_size,
+    train(model, criterion, optimizer, scheduler=scheduler, batch_size=args.batch_size,
         num_epochs=args.num_epochs, write_tensorboard_log=write_tensorboard_log,
         save_model=save_model, outdir=outdir, logger=logger)

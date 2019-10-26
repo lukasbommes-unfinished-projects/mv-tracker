@@ -14,13 +14,13 @@ from detector import DetectorTF
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
 from lib.dataset.stats import StatsMpeg4UpsampledStatic, \
-    StatsMpeg4UpsampledFull, StatsMpeg4DenseStaticMultiscale
+    StatsMpeg4UpsampledFull, StatsMpeg4DenseStaticSinglescale
 
 
 if __name__ == "__main__":
 
-    #video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4.mp4"  # test set, static cam
-    video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-mpeg4.mp4"  # test set, moving cam
+    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4.mp4"  # test set, static cam
+    #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-mpeg4.mp4"  # test set, moving cam
     #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-mpeg4.mp4"  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-mpeg4.mp4"  # val set, moving cam
 
@@ -39,10 +39,10 @@ if __name__ == "__main__":
     #     device=torch.device("cuda:0"))
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-10-25_03-41-31/model_final.pth",
+        weights_file="models/tracker/2019-10-26_05-07-47/model_final.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
         mvs_mode="dense",
         codec="mpeg4",
-        stats=StatsMpeg4DenseStaticMultiscale,
+        stats=StatsMpeg4DenseStaticSinglescale,
         device=torch.device("cuda:0"))
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
