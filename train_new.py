@@ -3,6 +3,7 @@ import time
 import datetime
 import copy
 import argparse
+import pickle
 from tqdm import tqdm
 import logging
 
@@ -18,7 +19,9 @@ from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUp
 from lib.dataset.dataset_new import MotionVectorDataset
 #from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale as Stats
 #from lib.dataset.stats import StatsMpeg4UpsampledStaticSinglescale as Stats
-from lib.dataset.stats import StatsMpeg4UpsampledFullSinglescale as Stats
+#from lib.dataset.stats import StatsMpeg4UpsampledFullSinglescale as Stats
+#from lib.dataset.stats import StatsH264UpsampledStaticSinglescale as Stats
+from lib.dataset.stats import StatsH264UpsampledFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -247,6 +250,7 @@ if __name__ == "__main__":
     log_to_file = True
     save_model = True
     write_tensorboard_log = True
+    save_normalization_stats = True
 
     args = parse_args()
     if isinstance(args.scales, float):
@@ -257,8 +261,11 @@ if __name__ == "__main__":
     # create output directory
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     outdir = os.path.join("models", "tracker", date)
-    if log_to_file or save_model:
+    if log_to_file or save_model or save_normalization_stats:
         os.makedirs(outdir, exist_ok=True)
+
+    if save_normalization_stats:
+        pickle.dump(Stats(), open(os.path.join(outdir, "stats.pkl"), "wb"))
 
     # setup logging
     logger = logging.getLogger(__name__)

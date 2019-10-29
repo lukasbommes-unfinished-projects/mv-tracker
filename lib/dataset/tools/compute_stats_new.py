@@ -32,7 +32,7 @@ class RunningStats():
 # run as python -m lib.dataset.tools.compute_stats from root dir
 if __name__ == "__main__":
     visu = False  # whether to show graphical output (frame + motion vectors) or not
-    codec = "mpeg4"
+    codec = "h264"
     mvs_mode = "upsampled"
     static_only = False
     exclude_keyframes = True
