@@ -89,31 +89,30 @@ class PropagationNetwork(nn.Module):
         boxes[..., 4] = boxes[..., 2] + boxes[..., 4]
         return boxes
 
-
-# names of layer weights (excludes batch norm layers, etc.), needed for weight logging
-layer_keys = [
-    'base.0.weight',
-    'base.4.0.conv1.weight',
-    'base.4.0.conv2.weight',
-    'base.4.2.conv1.weight',
-    'base.4.2.conv2.weight',
-    'base.6.0.conv1.weight',
-    'base.6.0.conv2.weight',
-    'base.6.0.downsample.0.weight',
-    'base.6.2.conv1.weight',
-    'base.6.2.conv2.weight',
-    'base.8.0.conv1.weight',
-    'base.8.0.conv2.weight',
-    'base.8.0.downsample.0.weight',
-    'base.8.2.conv1.weight',
-    'base.8.2.conv2.weight',
-    'base.10.0.conv1.weight',
-    'base.10.0.conv2.weight',
-    'base.10.0.downsample.0.weight',
-    'base.10.2.conv1.weight',
-    'base.10.2.conv2.weight',
-    'conv1x1.weight',
-]
+    # names of layer weights (excludes batch norm layers, etc.), needed for weight logging
+    layer_keys = [
+        'base.0.weight',
+        'base.4.0.conv1.weight',
+        'base.4.0.conv2.weight',
+        'base.4.2.conv1.weight',
+        'base.4.2.conv2.weight',
+        'base.6.0.conv1.weight',
+        'base.6.0.conv2.weight',
+        'base.6.0.downsample.0.weight',
+        'base.6.2.conv1.weight',
+        'base.6.2.conv2.weight',
+        'base.8.0.conv1.weight',
+        'base.8.0.conv2.weight',
+        'base.8.0.downsample.0.weight',
+        'base.8.2.conv1.weight',
+        'base.8.2.conv2.weight',
+        'base.10.0.conv1.weight',
+        'base.10.0.conv2.weight',
+        'base.10.0.downsample.0.weight',
+        'base.10.2.conv1.weight',
+        'base.10.2.conv2.weight',
+        'conv1x1.weight',
+    ]
 
 
 if __name__ == "__main__":

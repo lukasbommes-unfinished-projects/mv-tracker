@@ -133,9 +133,9 @@ class MotionVectorTracker:
         boxes_prev = np.copy(self.boxes)
         boxes_prev = torch.from_numpy(boxes_prev)
         num_boxes = (boxes_prev.shape)[0]
-        # model expects boxes in formant [frame_idx, xmin, ymin, w, h]
+        # model expects boxes in format [frame_idx, xmin, ymin, w, h]
         boxes_prev_tmp = torch.zeros(num_boxes, 5).float()
-        boxes_prev_tmp[:, 1:5] = boxes_prev
+        boxes_prev_tmp[:, 1:] = boxes_prev
         boxes_prev = boxes_prev_tmp
         boxes_prev = boxes_prev.unsqueeze(0)  # add batch dimension
 
@@ -148,7 +148,7 @@ class MotionVectorTracker:
                     None)
             elif self.mvs_mode == "dense":
                 boxes_prev_ = boxes_prev.clone()
-                boxes_prev_ = boxes_prev_ / 16.0
+                boxes_prev_[:, 1:] = boxes_prev_[:, 1:] / 16.0
                 velocities_pred = self.model(
                     self.last_motion_vectors.to(self.device),
                     boxes_prev_.to(self.device))

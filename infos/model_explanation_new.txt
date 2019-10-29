@@ -1,6 +1,53 @@
-2019-10-26_16-40-36 As 2019-10-26_16-36-23, but changed using scales [1.0, 0.75, 0.5] istead of 1.0 only
+###############################################
+# Best models so far are:
+#  -- Upsampled, MPEG4, Full dataset
+# 2019-10-28_15-12-38 -- Upsampled, MPEG4, Single Scale, Static cameras
+#
+###############################################
+
+2019-10-29_07-56-42 Settings similar to 2019-10-28_15-12-38, but uses full dataset including moving cameras
+trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled
+-> test performance [...]
+
+2019-10-29_07-16-10 Same as 2019-10-29_07-14-07, but with initial learning rate 1e-4 instead of 1e-5
+-> test performance [...]
+
+2019-10-29_07-14-07 Removed layer 3 and 4 of pnet_dense, changed spatial scale to 1/4 and changed first layer two kernel size 3 and stride 1 (as before)
+-> test performance [...]
+
+2019-10-29_06-09-54 Same as 2019-10-29_05-58-53, but uses default pytorch initalization instead of custom normal initialization
+-> Similar to 2019-10-29_05-58-53 val loss increases which support the theory that the feature map is of too low resolution, aborted training
+
+2019-10-29_05-58-53 Realized that pnet_dense model of 2019-10-29_01-16-42 was buggy. Stride was accidently set to 1 instead of 2, thus the spatial scale was wrong. Fixed it in this model and retrained with same parameters as in 2019-10-29_01-16-42. Additionally, layers are initialized with normal distribution instead of glorot.
+-> losses oscillate strong and val loss increases -> probably the resolution of the feature map is too low now for the model to work properly, aborted training
+
+2019-10-29_01-16-42 Same as 2019-10-27_01-42-31, but with differenet model architecture of pnet_dense (changed kernel size of first layer to 7 and fixed some weights)
+-> Test performance is not really good. Also, there was a bug in the model (wrong stride, thus wrong spatial scale)
+
+2019-10-28_15-12-38 Completely new model, which uses upsampled data. Settings are similar to 2019-10-16_09-24-32
+trained via cmd: python train_new.py --static_only --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0005 --mvs_mode upsampled
+-> test performance (of all three snapshots) is on par with Oct16_09-24-32_de2d11b5ab38, the best model trained with classical batched dataset so far
+
+2019-10-28_14-41-41 As 2019-10-27_01-42-31, but increased weight decay from 0.0001 to 0.0005 to reduce overfitting
+-> shows same overfitting as 2019-10-27_01-42-31, but resulting validation loss is even higher
+-> test performance is lower than that of 2019-10-27_01-42-31, boxes move to little or in wrong directions
+
+2019-10-27_01-42-31 As 2019-10-27_01-37-46, just scale is set to 1.0 (singlescale)
+-> Overftitting occurs, even though less strong than with multiscale
+-> Test performance (of model_lowest_loss) is better than 2019-10-27_01-37-46, but not as good as the one of 2019-10-25_03-41-31
+
+2019-10-27_01-37-46 As 2019-10-26_17-41-47 and 2019-10-26_17-51-33 diverged in the first 40 epochs with lr 1e-4, the initial lr is decreased to 1e-5 in this model, scales are [1.0, 0.75, 0.5] batch size is still 8 as it seems to work better than batch size 32 for velocity loss
+-> Strong overfitting occurs, stronger than with single scale (2019-10-27_01-42-31)
+-> Test performance of all thre odels is low, boxes move a lot but often in the wrong direction
+
+2019-10-26_17-51-33 As 2019-10-26_17-41-47, but uses batch size 8 instead of 32
+-> both train and val loss increased rapidly during training even more than in 2019-10-26_17-41-47), aborted training
+
+2019-10-26_17-41-47 As 2019-10-26_16-36-23, but changed using scales [1.0, 0.75, 0.5] instead of 1.0 only
+-> both train and val loss increased during training, aborted training
 
 2019-10-26_16-36-23 Realized that train code was buggy in 2019-10-26_05-07-47 and 2019-10-26_05-06-48, velocities were denormalized prior to comptuing loss. Rerun with same settings as 2019-10-26_05-07-47, but bug fixed.
+-> loss startedt increasing, thus aborted training to retry with lower batch size
 
 2019-10-26_05-07-47 Changed scheduler to 40, 0.1 and train for 160 epochs with initial lr 1e-4 and loss_velocities, batch size still 32
 -> test performance is very bad, boxes move much too fast (train code had bug)
@@ -32,5 +79,6 @@
 -> test performance is already okay, boxes move significantly
 
 2019-10-24_09-26-27	Dense model, this time with scheduler activated
+-> test performance is bad, boxes more too little
 
 2019-10-24_07-31-19	First experiment with dense model and train_new script, no scheduler

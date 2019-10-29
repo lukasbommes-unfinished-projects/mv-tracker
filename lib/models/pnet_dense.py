@@ -6,7 +6,7 @@ import torchvision
 
 from lib.resnet_atrous import resnet18
 from lib.utils import load_pretrained_weights_to_modified_resnet, \
-    change_box_format
+    change_box_format, normal_init
 
 
 class PropagationNetwork(nn.Module):
@@ -21,7 +21,8 @@ class PropagationNetwork(nn.Module):
         load_pretrained_weights_to_modified_resnet(resnet, resnet_weights)
 
         base = [
-            nn.Conv2d(2, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            #nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=1, bias=False),
+            nn.Conv2d(2, 64, kernel_size=3, stride=1, padding=1, bias=False),  # old version prior to 2019-10-29_01-16-42
             resnet.bn1,
             resnet.relu,
             resnet.maxpool,
@@ -29,10 +30,11 @@ class PropagationNetwork(nn.Module):
             resnet.relu,
             resnet.layer2,
             resnet.relu,
-            resnet.layer3,
-            resnet.relu,
-            resnet.layer4,
-            resnet.relu]
+            #resnet.layer3,
+            #resnet.relu,
+            #resnet.layer4,
+            #resnet.relu
+        ]
         self.base = nn.Sequential(*base)
 
         assert (0 <= self.FIXED_BLOCKS <= 4) # set this value to 0, so we can train all blocks
@@ -45,8 +47,15 @@ class PropagationNetwork(nn.Module):
         if self.FIXED_BLOCKS >= 1: # fix first 1 block
             for p in self.base[4].parameters(): p.requires_grad = False
 
-        self.conv1x1 = nn.Conv2d(512, 4*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
+        self.conv1x1 = nn.Conv2d(128, 4*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
         self.pooling = nn.AvgPool2d(kernel_size=self.POOLING_SIZE, stride=self.POOLING_SIZE)
+
+        #self.init_layers()
+
+
+    def init_layers(self):
+        normal_init(self.base[0], 0, 0.01)
+        normal_init(self.conv1x1, 0, 0.001)
 
 
     def forward(self, motion_vectors, boxes_prev):
@@ -60,38 +69,37 @@ class PropagationNetwork(nn.Module):
         boxes_prev_ = change_box_format(boxes_prev)
 
         # compute ratio of input size to size of base output
-        # spatial scale is only 1/8, because first layer has kernel size 3 instead of 7 as in the upsampled model
-        x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/8)
+        x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/4)
         x = self.pooling(x)
         x = x.squeeze()
         velocities_pred = x.view(-1, 4)
         return velocities_pred
 
 
-# names of layer weights (excludes batch norm layers, etc.), needed for weight logging
-layer_keys = [
-    'base.0.weight',
-    'base.4.0.conv1.weight',
-    'base.4.0.conv2.weight',
-    'base.4.2.conv1.weight',
-    'base.4.2.conv2.weight',
-    'base.6.0.conv1.weight',
-    'base.6.0.conv2.weight',
-    'base.6.0.downsample.0.weight',
-    'base.6.2.conv1.weight',
-    'base.6.2.conv2.weight',
-    'base.8.0.conv1.weight',
-    'base.8.0.conv2.weight',
-    'base.8.0.downsample.0.weight',
-    'base.8.2.conv1.weight',
-    'base.8.2.conv2.weight',
-    'base.10.0.conv1.weight',
-    'base.10.0.conv2.weight',
-    'base.10.0.downsample.0.weight',
-    'base.10.2.conv1.weight',
-    'base.10.2.conv2.weight',
-    'conv1x1.weight',
-]
+    # names of layer weights (excludes batch norm layers, etc.), needed for weight logging
+    layer_keys = [
+        'base.0.weight',
+        'base.4.0.conv1.weight',
+        'base.4.0.conv2.weight',
+        'base.4.2.conv1.weight',
+        'base.4.2.conv2.weight',
+        'base.6.0.conv1.weight',
+        'base.6.0.conv2.weight',
+        'base.6.0.downsample.0.weight',
+        'base.6.2.conv1.weight',
+        'base.6.2.conv2.weight',
+        #'base.8.0.conv1.weight',
+        #'base.8.0.conv2.weight',
+        #'base.8.0.downsample.0.weight',
+        #'base.8.2.conv1.weight',
+        #'base.8.2.conv2.weight',
+        #'base.10.0.conv1.weight',
+        #'base.10.0.conv2.weight',
+        #'base.10.0.downsample.0.weight',
+        #'base.10.2.conv1.weight',
+        #'base.10.2.conv2.weight',
+        'conv1x1.weight',
+    ]
 
 
 if __name__ == "__main__":

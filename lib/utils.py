@@ -46,6 +46,16 @@ def change_box_format(boxes):
     return boxes_
 
 
+def normal_init(layer, mean, stddev, truncated=False):
+    """Weight initalizer: truncated normal and random normal."""
+    if truncated:
+        layer.weight.data.normal_().fmod_(2).mul_(stddev).add_(mean)  # not a perfect approximation
+    else:
+        layer.weight.data.normal_(mean, stddev)
+        if layer.bias is not None:
+            layer.bias.data.zero_()
+
+
 def compute_mean_iou(boxes_pred, boxes):
     """Compute the mean IoUs of all predicted and ground truth boxes
 

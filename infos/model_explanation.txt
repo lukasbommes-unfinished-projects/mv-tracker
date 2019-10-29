@@ -6,10 +6,6 @@
 ###############################################
 
 
-
-
-
-
 2019-10-23_09-25-34
 
 model: pnet_single_branch (renamed into pnet_upsampled)

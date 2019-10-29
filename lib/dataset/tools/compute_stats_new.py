@@ -33,10 +33,10 @@ class RunningStats():
 if __name__ == "__main__":
     visu = False  # whether to show graphical output (frame + motion vectors) or not
     codec = "mpeg4"
-    mvs_mode = "dense"
-    static_only = True
+    mvs_mode = "upsampled"
+    static_only = False
     exclude_keyframes = True
-    scales = [1.0, 0.75, 0.5]
+    scales = [1.0]#, 0.75, 0.5]
 
     dataset_train = MotionVectorDataset(root_dir='data', transforms=None, codec=codec,
         scales=scales, mvs_mode=mvs_mode, static_only=static_only,

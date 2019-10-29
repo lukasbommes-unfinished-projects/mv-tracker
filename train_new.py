@@ -13,9 +13,12 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import torchvision
 
-from lib.models.pnet_dense import PropagationNetwork, layer_keys
+from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
+from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsMpeg4DenseStaticMultiscale as Stats
+#from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale as Stats
+#from lib.dataset.stats import StatsMpeg4UpsampledStaticSinglescale as Stats
+from lib.dataset.stats import StatsMpeg4UpsampledFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -30,23 +33,23 @@ torch.autograd.set_detect_anomaly(True)
 def log_weights(model, epoch, writer):
     state_dict = model.state_dict()
     is_parallel = "module" in list(state_dict.keys())[0]
-    for key in layer_keys:
+    for key in model.layer_keys:
         if is_parallel:
             key = "module.{}".format(key)
         weights = state_dict[key].detach().cpu().flatten().numpy()
         writer.add_histogram(key, weights, global_step=epoch, bins='tensorflow')
 
 
-def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
+def train(model, optimizer, loss_type, mvs_mode, scheduler, batch_size, num_epochs,
     write_tensorboard_log, save_model, outdir, logger):
     tstart = time.time()
     if write_tensorboard_log:
         writer = SummaryWriter()
 
-    if loss_type == "loss_velocities" or loss_type == "loss_multitask":
-        criterion_velocity = nn.SmoothL1Loss(reduction='mean')
-    if loss_type == "loss_iou" or loss_type == "":
-        criterion_iou = IouLoss()
+    #if loss_type == "loss_velocities" or loss_type == "loss_multitask":
+    criterion_velocity = nn.SmoothL1Loss(reduction='mean')
+    #if loss_type == "loss_iou" or loss_type == "":
+    #    criterion_iou = IouLoss()
 
     best_loss = 99999.0
     best_mean_iou = 0.0
@@ -96,29 +99,33 @@ def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
                     boxes = boxes.view(-1, 5)
                     velocities = velocities.view(-1, 4)
 
-                    velocities_pred = model(motion_vectors, boxes_prev)
+                    if mvs_mode == "upsampled":
+                        velocities_pred = model(motion_vectors, boxes_prev, None)
+                    elif mvs_mode == "dense":
+                        velocities_pred = model(motion_vectors, boxes_prev)
 
                     # compute velocities loss
-                    if loss_type == "loss_velocities" or loss_type == "loss_multitask":
-                        loss_velocities = criterion_velocity(velocities_pred, velocities)
+                    #if loss_type == "loss_velocities" or loss_type == "loss_multitask":
+                    #loss_velocities = criterion_velocity(velocities_pred, velocities)
+                    loss = criterion_velocity(velocities_pred, velocities)
 
                     # undo normalization (do that here because mean IoU logging below also needs unnormalized velocities)
-                    velocities_mean = torch.tensor(Stats.velocities["mean"]).to(device)
-                    velocities_std = torch.tensor(Stats.velocities["std"]).to(device)
-                    velocities_pred = velocities_pred * velocities_std + velocities_mean
-                    boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
+                    #velocities_mean = torch.tensor(Stats.velocities["mean"]).to(device)
+                    #velocities_std = torch.tensor(Stats.velocities["std"]).to(device)
+                    #velocities_pred = velocities_pred * velocities_std + velocities_mean
+                    #boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
 
                     # compute box IoU loss
-                    if loss_type == "loss_iou" or loss_type == "loss_multitask":
-                        loss_iou = criterion_iou(boxes_pred, boxes[:, 1:])
+                    #if loss_type == "loss_iou" or loss_type == "loss_multitask":
+                    #    loss_iou = criterion_iou(boxes_pred, boxes[:, 1:])
 
-                    if loss_type == "loss_multitask":
-                        loss = loss_velocities + loss_iou
-                        loss_ratio = loss_velocities.item() / loss_iou.item()  # log loss ratio
-                    elif loss_type == "loss_velocities":
-                        loss = loss_velocities
-                    elif loss_type == "loss_iou":
-                        loss = loss_iou
+                    #if loss_type == "loss_multitask":
+                    #    loss = loss_velocities + loss_iou
+                    #    loss_ratio = loss_velocities.item() / loss_iou.item()  # log loss ratio
+                    #elif loss_type == "loss_velocities":
+                    #    loss = loss_velocities
+                    #elif loss_type == "loss_iou":
+                    #    loss = loss_iou
 
                     if phase == "train":
                         if write_tensorboard_log:
@@ -147,7 +154,10 @@ def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
                     boxes = boxes.detach().cpu().view(-1, 5)
                     boxes_prev = boxes_prev.detach().cpu().view(-1, 5)
                     velocities_pred = velocities_pred.detach().cpu().view(-1, 4)
-                    # velocities are already denormlized so we can directly predict boxes
+                    # denormalize velocities before predicting boxes
+                    velocities_mean = torch.tensor(Stats.velocities["mean"])
+                    velocities_std = torch.tensor(Stats.velocities["std"])
+                    velocities_pred = velocities_pred * velocities_std + velocities_mean
                     boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
                     mean_iou = compute_mean_iou(boxes_pred, boxes[:, 1:])
                     running_mean_iou.append(mean_iou)
@@ -155,8 +165,8 @@ def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
                     if write_tensorboard_log:
                         writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
                         writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
-                        if loss_type == "multi-task":
-                            writer.add_scalar('Loss Ratio/{}'.format(phase), loss_ratio, iterations[phase])
+                        #if loss_type == "multi-task":
+                        #    writer.add_scalar('Loss Ratio/{}'.format(phase), loss_ratio, iterations[phase])
 
                     iterations[phase] += 1
 
@@ -176,25 +186,18 @@ def train(model, optimizer, loss_type, scheduler, batch_size, num_epochs,
                 best_loss = epoch_loss
                 if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
+                    logger.info("Saving model with lowest loss so far")
                     torch.save(best_model_wts, os.path.join(outdir, "model_lowest_loss.pth"))
 
             if phase == "val" and epoch_mean_iou >= best_mean_iou:
                 best_mean_iou = epoch_mean_iou
                 if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
+                    logger.info("Saving model with highest IoU so far")
                     torch.save(best_model_wts, os.path.join(outdir, "model_highest_iou.pth"))
 
         if scheduler:
             scheduler.step()
-
-        logger.info("velocities {}".format(velocities))
-        velocities_mean = torch.tensor(Stats.velocities["mean"]).to(device)
-        velocities_std = torch.tensor(Stats.velocities["std"]).to(device)
-        velocities_pred = (velocities_pred - velocities_mean) / velocities_std
-        logger.info("velocities_pred {}".format(velocities_pred))
-        logger.info("boxes_prev {}".format(boxes_prev))
-        logger.info("boxes {}".format(boxes))
-        logger.info("boxes_pred {}".format(boxes_pred))
 
         if write_tensorboard_log:
             log_weights(model, epoch, writer)
@@ -308,7 +311,11 @@ if __name__ == "__main__":
 
     device = torch.device("cuda:{}".format(args.gpus[0]) if torch.cuda.is_available() else "cpu")
 
-    model = PropagationNetwork()
+    if args.mvs_mode == "upsampled":
+        model = PropagationNetworkUpsampled()
+    elif args.mvs_mode =="dense":
+        model = PropagationNetworkDense()
+
     if len(args.gpus) > 1 and torch.cuda.device_count() > 1:
         model = nn.DataParallel(model, device_ids=args.gpus)
     model = model.to(device)
@@ -324,6 +331,6 @@ if __name__ == "__main__":
     logger.info(f"optimizer: {optimizer}")
     logger.info(f"transforms: {transforms['train']}")
 
-    train(model, optimizer, loss_type=args.loss_type, scheduler=scheduler, batch_size=args.batch_size,
+    train(model, optimizer, loss_type=args.loss_type, mvs_mode=args.mvs_mode, scheduler=scheduler, batch_size=args.batch_size,
         num_epochs=args.num_epochs, write_tensorboard_log=write_tensorboard_log,
         save_model=save_model, outdir=outdir, logger=logger)
