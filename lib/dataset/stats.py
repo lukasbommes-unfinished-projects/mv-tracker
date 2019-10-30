@@ -62,15 +62,15 @@ class StatsH264UpsampledStaticSinglescale():
 
 
 # h264 upsampled, no keyframes, training data, full dataset
-#
+# codec = h264, mvs_mode = upsampled, static_only = False, exclude_keyframes = True, scales = [1.0]
 class StatsH264UpsampledFullSinglescale():
     velocities = {
-        "mean": [],
-        "std": []
+        "mean": [-0.01869362938217712, 0.002564289825545628, 0.0024215682242336375, 0.00273292535165579],
+        "std": [0.21282890555483014, 0.03603655236239526, 0.044628622076697336, 0.014933934907838183]
     }
     motion_vectors = {
-        "mean": [0.0, ],
-        "std": [1.0, ]
+        "mean": [0.0, 0.3191829975906806, -0.38650262600788565],
+        "std": [1.0, 1.279285802893745, 4.7578745524065615]
     }
 
 

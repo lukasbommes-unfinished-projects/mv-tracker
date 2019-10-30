@@ -5,8 +5,18 @@
 #
 ###############################################
 
-[not started yet] Like 2019-10-29_07-56-42, but uses H264 instead of MPEG4
-trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled --codec h264
+2019-10-30_02-47-42 As 2019-10-29_07-56-42, but uses higher learning rate of 1e-4 and weight decay 0.005.
+trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-4 --batch_size 8 --weight_decay 0.0005 --mvs_mode upsampled
+-> test performance [...]
+
+2019-10-30_02-37-39 As 2019-10-30_02-27-12, but uses normal initialization for conv1x1 layer instead of glorot.
+-> test performance very bad, boxes do not move
+
+2019-10-30_02-27-12 Trying an extremely simple model for dense mvs having only conv1x1 layer and ps roi pool. Based on the observation in 2019-10-29_07-16-10 that untrained network performed better than the trained one.
+-> test performance very bad, boxes do not move
+
+2019-10-29_09-35-25 Like 2019-10-29_07-56-42, but uses H264 instead of MPEG4
+trained via cmd: python train_new.py --gpu 1 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled --codec h264
 -> test performance [...]
 
 2019-10-29_09-07-07 Settings like 2019-10-28_15-12-38, but uses H264 instead of MPEG4. In the hope no further parameters need to be tuned and performance can be compared directly between the two approaches
@@ -18,10 +28,11 @@ trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 
 -> test performance [...]
 
 2019-10-29_07-16-10 Same as 2019-10-29_07-14-07, but with initial learning rate 1e-4 instead of 1e-5
--> test performance [...]
+-> test performance is slightly better than that of 2019-10-29_07-14-07 on test video, but fails mostly on val video
+-> figured out that not trained network performs best
 
 2019-10-29_07-14-07 Removed layer 3 and 4 of pnet_dense, changed spatial scale to 1/4 and changed first layer two kernel size 3 and stride 1 (as before)
--> test performance [...]
+-> test performance of all three snapshots is not too bad, but much worse than that of upsampled model
 
 2019-10-29_06-09-54 Same as 2019-10-29_05-58-53, but uses default pytorch initalization instead of custom normal initialization
 -> Similar to 2019-10-29_05-58-53 val loss increases which support the theory that the feature map is of too low resolution, aborted training

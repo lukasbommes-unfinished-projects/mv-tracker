@@ -39,20 +39,20 @@ if __name__ == "__main__":
     #     codec="mpeg4",
     #     stats=StatsMpeg4UpsampledFull,
     #     device=torch.device("cuda:0"))
-    tracker_deep = MotionVectorTrackerDeep(
-        iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-10-28_15-12-38/model_highest_iou.pth", #  2019-10-23_09-25-34/model_final.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
-        mvs_mode="upsampled",
-        codec="mpeg4",
-        stats=StatsMpeg4UpsampledStaticSinglescale,
-        device=torch.device("cuda:0"))
     # tracker_deep = MotionVectorTrackerDeep(
     #     iou_threshold=tracker_iou_thres,
-    #     weights_file="models/tracker/2019-10-28_14-41-41/model_highest_iou.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
-    #     mvs_mode="dense",
+    #     weights_file="models/tracker/2019-10-28_15-12-38/model_highest_iou.pth", #  2019-10-23_09-25-34/model_final.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
+    #     mvs_mode="upsampled",
     #     codec="mpeg4",
-    #     stats=StatsMpeg4DenseStaticSinglescale,
+    #     stats=StatsMpeg4UpsampledStaticSinglescale,
     #     device=torch.device("cuda:0"))
+    tracker_deep = MotionVectorTrackerDeep(
+        iou_threshold=tracker_iou_thres,
+        weights_file="models/tracker/2019-10-30_02-37-39/model_final.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
+        mvs_mode="dense",
+        codec="mpeg4",
+        stats=StatsMpeg4DenseStaticSinglescale,
+        device=torch.device("cuda:0"))
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
