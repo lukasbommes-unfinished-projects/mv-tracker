@@ -6,8 +6,6 @@ import torchvision
 import cv2
 import numpy as np
 
-from video_cap import VideoCap
-
 from lib.dataset.loaders import load_groundtruth
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
     normalize_vectors, motion_vectors_to_image, motion_vectors_to_grid, \

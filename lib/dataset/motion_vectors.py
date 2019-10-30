@@ -1,6 +1,7 @@
 import math
 import torch
 import numpy as np
+import cv2
 from scipy.interpolate import griddata
 
 
@@ -83,6 +84,69 @@ def normalize_vectors(motion_vectors):
         return motion_vectors
 
 
+def motion_vectors_to_hsv_image(motion_vectors, frame_shape=(1920, 1080)):
+    """Convert a set of motion vectors into a HSV image and return it as BGR image.
+
+    Args:
+        motion_vectors (`numpy.ndarray`): Motion vector array with shape [N, 10]
+            as returned by VideoCap. The motion vector array should only contain P-vectors
+            which can be filtered out by using get_vectors_by_source(motion_vectors, "past").
+            Also, the reference frame should be normalized by using normalize_vectors.
+
+        frame_shape (`tuple` of `int`): Desired (width, height) in pixels of the returned image.
+            Should correspond to the size of the source footage of which the motion vectors
+            where extracted.
+
+    Returns:
+        `numpy.ndarray` The motion vectors encoded as uint8 image. Image shape
+        is (height, widht, 3) and channel order is BGR. The BGR image is
+        generated from a HSV representation of the motion vectors where the
+        vector magnitude is stored in the saturation channel and the vector
+        angle is stored in the hue channel.
+    """
+    # compute necessary frame shape
+    need_width = math.ceil(frame_shape[0] / 16) * 16
+    need_height = math.ceil(frame_shape[1] / 16) * 16
+
+    image = np.zeros((need_height, need_width, 3), dtype=np.uint8)
+
+    if np.shape(motion_vectors)[0] != 0:
+
+        # get minimum and maximum values
+        mvs_dst_x = motion_vectors[:, 5]
+        mvs_dst_y = motion_vectors[:, 6]
+        mb_w = motion_vectors[:, 1]
+        mb_h = motion_vectors[:, 2]
+        mvs_tl_x = (mvs_dst_x - 0.5 * mb_w).astype(np.int64)
+        mvs_tl_y = (mvs_dst_y - 0.5 * mb_h).astype(np.int64)
+
+        # scale motion value with the motion_scale
+        mvs_motion_x = (motion_vectors[:, 7] / motion_vectors[:, 9]).reshape(-1, 1)
+        mvs_motion_y = (motion_vectors[:, 8] / motion_vectors[:, 9]).reshape(-1, 1)
+
+        # transform x and y motion to angle in range 0...180 and magnitude in range 0...255
+        mvs_motion_magnitude, mvs_motion_angle = cv2.cartToPolar(mvs_motion_x, mvs_motion_y)
+        mvs_motion_angle = mvs_motion_angle * 180 / (2 * np.pi)  # hue channel is [0, 180]
+        mvs_motion_magnitude = cv2.normalize(mvs_motion_magnitude, None, 0, 255, cv2.NORM_MINMAX)
+
+        for i, motion_vector in enumerate(motion_vectors):
+            # repeat value in theshape of the underlying macroblock, e.g. 16 x 16 or 16 x 8
+            mvs_motion_angle_repeated = np.repeat(np.repeat(mvs_motion_angle[i, :].reshape(1, 1), mb_h[i], axis=0), mb_w[i], axis=1)
+            mvs_motion_magnitude_repeated = np.repeat(np.repeat(mvs_motion_magnitude[i, :].reshape(1, 1), mb_h[i], axis=0), mb_w[i], axis=1)
+
+            # insert repeated block into image, angle is hue (channel 0), magitude is saturation (channel 1)
+            image[mvs_tl_y[i]:mvs_tl_y[i]+mb_h[i], mvs_tl_x[i]:mvs_tl_x[i]+mb_w[i], 0] = mvs_motion_angle_repeated
+            image[mvs_tl_y[i]:mvs_tl_y[i]+mb_h[i], mvs_tl_x[i]:mvs_tl_x[i]+mb_w[i], 1] = mvs_motion_magnitude_repeated
+
+    # crop the image back to frame_shape
+    image = image[0:frame_shape[1], 0:frame_shape[0], :]
+    image[:, :, 2] = 255
+    image = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
+
+    return image
+
+
+
 def motion_vectors_to_image(motion_vectors, frame_shape=(1920, 1080), scale=False):
     """Converts a set of motion vectors into a BGR image.
 
@@ -100,9 +164,10 @@ def motion_vectors_to_image(motion_vectors, frame_shape=(1920, 1080), scale=Fals
             range [0, 1]. If False, do not scale.
 
     Returns:
-        `numpy.ndarray` The motion vectors encoded as image. Image shape is (height, widht, 3)
-        and channel order is BGR. The red channel contains the x motion components of
-        the motion vectors and the green channel the y motion components.
+        `numpy.ndarray` The motion vectors encoded as float32 image. Image shape
+        is (height, widht, 3) and channel order is BGR. The red channel contains
+        the x motion components of the motion vectors and the green channel the
+        y motion components.
     """
     # compute necessary frame shape
     need_width = math.ceil(frame_shape[0] / 16) * 16
