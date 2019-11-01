@@ -222,10 +222,10 @@ if __name__ == "__main__":
     scheduler_factor = 0.1
     gpu = 1
 
-    log_to_file = True
-    save_model = True
-    write_tensorboard_log = True
-    save_normalization_stats = True
+    log_to_file = False
+    save_model = False
+    write_tensorboard_log = False
+    save_normalization_stats = False
 
     # create output directory
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
