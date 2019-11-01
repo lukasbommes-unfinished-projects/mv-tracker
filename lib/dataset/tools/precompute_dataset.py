@@ -14,12 +14,14 @@ if __name__ == "__main__":
     # configure desired dataset settings here
     batch_size = 8
     codec = "mpeg4"
+    static_only = True
+
     modes = ["train", "val"]  # which datasets to generate
     input_folder = "data"  # where to look for the input dataset, relative to root dir
     output_folder = "data_precomputed" # where to save the precomputed samples, relative to root dir
 
     items = ["motion_vectors", "boxes_prev", "boxes", "velocities",
-        "num_boxes_mask", "det_boxes_prev"]
+        "num_boxes_mask"]
 
     for mode in modes:
 
@@ -33,7 +35,8 @@ if __name__ == "__main__":
                 raise FileExistsError(msg)
 
         dataset = MotionVectorDataset(root_dir=input_folder,
-            batch_size=batch_size, codec=codec, visu=False, mode=mode)
+            batch_size=batch_size, codec=codec, static_only=static_only,
+            visu=False, mode=mode)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size,
             shuffle=False, num_workers=0)
 

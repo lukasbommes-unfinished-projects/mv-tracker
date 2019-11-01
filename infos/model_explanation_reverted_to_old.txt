@@ -1,0 +1,12 @@
+###############################################
+# Best models so far are:
+#  -- MPEG4, Full dataset, P vectors
+#  -- MPEG4, Static cameras, P vectors
+#  -- MPEG4, Full dataset, P vectors
+#  -- H264, Static cameras, P vectors
+#
+###############################################
+
+2019-10-30_02-47-42 As 2019-10-29_07-56-42, but uses higher learning rate of 1e-4 and weight decay 0.005.
+trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-4 --batch_size 8 --weight_decay 0.0005 --mvs_mode upsampled
+-> test performance [...]

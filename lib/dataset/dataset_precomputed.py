@@ -5,16 +5,13 @@ import cv2
 import torch
 import torchvision
 
-from lib.transforms.transforms import StandardizeMotionVectors, \
-    StandardizeVelocities, ScaleImage, RandomScaleImage, RandomFlip, RandomMotionChange
-from lib.dataset.stats import StatsMpeg4UpsampledFull as Stats
 from lib.visu import draw_boxes, draw_velocities
 
 
 class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, transforms=None):
         self.items = ["motion_vectors", "boxes_prev", "boxes", "velocities",
-            "num_boxes_mask", "det_boxes_prev"]
+            "num_boxes_mask"]
         self.dirs = {}
         for item in self.items:
             self.dirs[item] = os.path.join(root_dir, item)
@@ -22,14 +19,7 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
         self.length = len(glob.glob(os.path.join(self.dirs[self.items[0]], "*.pkl")))
 
         # prepare transforms
-        self.transforms = torchvision.transforms.Compose([
-            RandomFlip(directions=["x", "y"]),
-            StandardizeVelocities(mean=Stats.velocities["mean"], std=Stats.velocities["std"]),
-            StandardizeMotionVectors(mean=Stats.motion_vectors["mean"], std=Stats.motion_vectors["std"]),
-            RandomMotionChange(scale=1.0),
-            #ScaleImage(items=["motion_vectors"], scale=600, max_size=1000),
-            #RandomScaleImage(items=["motion_vectors"], scales=[300, 400, 500, 600, 700, 800, 900, 1000], max_size=1920),
-        ])
+        self.transforms = transforms
 
     def __len__(self):
         return self.length
@@ -43,7 +33,8 @@ class MotionVectorDatasetPrecomputed(torch.utils.data.Dataset):
             sample[item] = pickle.load(open(file, "rb"))
 
         # apply transforms to each sample
-        sample = self.transforms(sample)
+        if self.transforms:
+            sample = self.transforms(sample)
 
         # swap channel order of motion vectors from BGR to RGB
         sample["motion_vectors"] = sample["motion_vectors"][..., [2, 1, 0]]
@@ -81,7 +72,6 @@ if __name__ == "__main__":
             boxes_prev = sample["boxes_prev"]
             velocities = sample["velocities"]
             num_boxes_mask = sample["num_boxes_mask"]
-            det_boxes_prev = sample["det_boxes_prev"]
 
             print("Step: {}".format(step))
             print("mvs 0 x motion total:", torch.sum(motion_vectors[0, 0, :, :]))
@@ -91,13 +81,11 @@ if __name__ == "__main__":
             print(boxes_prev.shape)
             print(velocities.shape)
             print(num_boxes_mask.shape)
-            print(det_boxes_prev.shape)
 
             for batch_idx in range(motion_vectors.shape[0]):
 
                 motion_vectors_ = motion_vectors[batch_idx, ...]
                 boxes_prev_ = boxes_prev[batch_idx, ...]
-                det_boxes_prev_ = det_boxes_prev[batch_idx, ...]
                 velocities_ = velocities[batch_idx, ...]
 
                 # (C, H, W) -> (H, W, C)
@@ -106,7 +94,6 @@ if __name__ == "__main__":
                 motion_vectors_ = motion_vectors_.numpy()
                 motion_vectors_ = (motion_vectors_ - np.min(motion_vectors_)) / (np.max(motion_vectors_) - np.min(motion_vectors_))
                 motion_vectors_ = draw_boxes(motion_vectors_, boxes_prev_[:, 1:], None, color=(200, 200, 200))
-                motion_vectors_ = draw_boxes(motion_vectors_, det_boxes_prev_[:, 1:], None, color=(50, 255, 50))
                 motion_vectors_ = draw_velocities(motion_vectors_, boxes_prev_[:, 1:], velocities_, scale=100)
 
                 print("step: {}, MVS shape: {}".format(step, motion_vectors_.shape))

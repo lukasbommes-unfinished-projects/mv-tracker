@@ -31,8 +31,13 @@ class RunningStats():
 
 # run as python -m lib.dataset.tools.compute_stats from root dir
 if __name__ == "__main__":
+
+    codec = "mpeg4"
+    static_only = False
     visu = False  # whether to show graphical output (frame + motion vectors) or not
-    dataset_train = MotionVectorDataset(root_dir='data', batch_size=1, codec="mpeg4", visu=visu, mode="train")
+
+    dataset_train = MotionVectorDataset(root_dir="data", batch_size=1, codec=codec,
+        static_only=static_only, visu=visu, mode="train")
     dataloader_train = torch.utils.data.DataLoader(dataset_train, batch_size=1, shuffle=False, num_workers=0)
 
     step_wise = False
@@ -89,6 +94,7 @@ if __name__ == "__main__":
                         break
 
     # output finalized stats
+    print("codec = {}, static_only = {}".format(codec, static_only))
     print("mvs x -- mean: {}, variance: {}, std: {}".format(*runnings_stats_mvs_x.get_stats()))
     print("mvs y -- mean: {}, variance: {}, std: {}".format(*runnings_stats_mvs_y.get_stats()))
 

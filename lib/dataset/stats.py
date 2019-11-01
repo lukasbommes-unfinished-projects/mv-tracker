@@ -1,5 +1,7 @@
-# mpeg4 upsampled, training data, only static cameras (Note: Theese metrics still include the num_boxes_mask bug)
-class StatsMpeg4UpsampledStatic():
+######################### REVERTED TO OLD DATASET #########################
+
+# codec = mpeg4, static_only = True, vector_type = p
+class StatsMpeg4StaticP():
     velocities = {
         "mean": [0.0035801701807530333, 0.0002152514312298825, 0.00021574009192311123, 8.994028635911342e-05],
         "std": [0.09732869575370293, 0.012557833992140246, 0.01932378335492126, 0.004216800692202473]
@@ -9,8 +11,9 @@ class StatsMpeg4UpsampledStatic():
         "std": [1.0, 0.060623864350822454,  0.4022695243698158]  # [1.0, mvs_std_y, mvs_std_x]
     }
 
-# mpeg4 upsampled, training data, full dataset
-class StatsMpeg4UpsampledFull():
+
+# codec = mpeg4, static_only = False, vector_type = p
+class StatsMpeg4FullP():
     velocities = {
         "mean": [-0.018599934971495233, 0.0025663658130240146, 0.002417661236454852, 0.002733427047478466],
         "std": [0.21269956851634267, 0.036000079453724264, 0.044600952658130015, 0.014932423372624959]
@@ -19,6 +22,73 @@ class StatsMpeg4UpsampledFull():
         "mean": [0.0, 0.139698425141241, -0.16339078281237884],
         "std": [1.0, 0.9256943895550922,  2.821564673026061]
     }
+
+
+class StatsH264StaticP():
+    velocities = {
+        "mean": [],
+        "std": []
+    }
+    motion_vectors = {
+        "mean": [0.0, ],
+        "std": [1.0, ]
+    }
+
+
+class StatsH264FullP():
+    velocities = {
+        "mean": [],
+        "std": []
+    }
+    motion_vectors = {
+        "mean": [0.0, ],
+        "std": [1.0, ]
+    }
+
+
+class StatsH264StaticB():
+    velocities = {
+        "mean": [],
+        "std": []
+    }
+    motion_vectors = {
+        "mean": [0.0, ],
+        "std": [1.0, ]
+    }
+
+
+class StatsH264FullB():
+    velocities = {
+        "mean": [],
+        "std": []
+    }
+    motion_vectors = {
+        "mean": [0.0, ],
+        "std": [1.0, ]
+    }
+
+
+class StatsH264StaticPB():
+    velocities = {
+        "mean": [],
+        "std": []
+    }
+    motion_vectors = {
+        "mean": [0.0, ],
+        "std": [1.0, ]
+    }
+
+
+class StatsH264FullPB():
+    velocities = {
+        "mean": [],
+        "std": []
+    }
+    motion_vectors = {
+        "mean": [0.0, ],
+        "std": [1.0, ]
+    }
+
 
 ######################### NEW DATASET (excludes keyframes) #########################
 
@@ -96,4 +166,29 @@ class StatsMpeg4DenseStaticSinglescale():
     motion_vectors = {
         "mean": [0.0, 0.016107642943830696, 0.07541612903921065],
         "std": [1.0, 0.06298750897933865, 0.42173798690940506]
+    }
+
+
+######################### OLD STATS NOT USED ANYMORE (Same as above) #########################
+
+# mpeg4 upsampled, training data, only static cameras
+class StatsMpeg4UpsampledStatic():
+    velocities = {
+        "mean": [0.0035801701807530333, 0.0002152514312298825, 0.00021574009192311123, 8.994028635911342e-05],
+        "std": [0.09732869575370293, 0.012557833992140246, 0.01932378335492126, 0.004216800692202473]
+    }
+    motion_vectors = {
+        "mean": [0.0, 0.014817102005829075, 0.0705440781107341], # [0.0, mvs_mean_y, mvs_mean_x]
+        "std": [1.0, 0.060623864350822454,  0.4022695243698158]  # [1.0, mvs_std_y, mvs_std_x]
+    }
+
+# mpeg4 upsampled, training data, full dataset
+class StatsMpeg4UpsampledFull():
+    velocities = {
+        "mean": [-0.018599934971495233, 0.0025663658130240146, 0.002417661236454852, 0.002733427047478466],
+        "std": [0.21269956851634267, 0.036000079453724264, 0.044600952658130015, 0.014932423372624959]
+    }
+    motion_vectors = {
+        "mean": [0.0, 0.139698425141241, -0.16339078281237884],
+        "std": [1.0, 0.9256943895550922,  2.821564673026061]
     }
