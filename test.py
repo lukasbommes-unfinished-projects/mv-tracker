@@ -21,9 +21,10 @@ from lib.dataset.stats import StatsMpeg4UpsampledStatic, \
 
 if __name__ == "__main__":
 
+    # reminder: when evaluating h264 models, use h264 videos
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-mpeg4-1.0.mp4"  # train set, static cam
-    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4-1.0.mp4"  # test set, static cam
-    #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-mpeg4.mp4"  # test set, moving cam
+    #video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-h264-1.0.mp4"  # test set, static cam
+    video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-h264.mp4"  # test set, moving cam
     #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-mpeg4.mp4"  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-mpeg4.mp4"  # val set, moving cam
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     #     device=torch.device("cuda:0"))
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-10-29_09-35-25/model_lowest_loss.pth", #  2019-10-23_09-25-34/model_final.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
+        weights_file="models/tracker/2019-10-29_09-35-25/model_highest_iou.pth", #  2019-10-23_09-25-34/model_final.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
         mvs_mode="upsampled",
         codec="h264",
         stats=StatsH264UpsampledFullSinglescale, #StatsMpeg4UpsampledStaticSinglescale,

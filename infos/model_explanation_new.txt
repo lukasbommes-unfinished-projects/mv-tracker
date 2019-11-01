@@ -22,7 +22,7 @@ trained via cmd: python train_new.py --gpu 1 --scales 1.0 --scheduler_frequency 
 
 2019-10-29_09-07-07 Settings like 2019-10-28_15-12-38, but uses H264 instead of MPEG4. In the hope no further parameters need to be tuned and performance can be compared directly between the two approaches
 trained via cmd: python train_new.py --static_only --gpu 1 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0005 --mvs_mode upsampled --codec h264
--> test performance is okay, but not as good as for the MPEG4 model
+-> test performance is as good as that of the MPEG4 model
 
 2019-10-29_07-56-42 Settings similar to 2019-10-28_15-12-38, but uses full dataset including moving cameras
 trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled
