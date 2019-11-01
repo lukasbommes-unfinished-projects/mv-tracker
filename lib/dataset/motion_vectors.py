@@ -64,6 +64,10 @@ def normalize_vectors(motion_vectors):
     The source value in the first column is set to -1 for all p-vectors and
     set to 1 for all b-vectors. The x and y motion values are scaled
     accordingly. Vector source position and destination position are unchanged.
+    The resulting motion values can be interpreted as follows: If the motion
+    value in x direction is negative, the corresponding macroblock moved towards
+    the left side. If the y motion value is negative, the macroblock moved
+    upwards. This holds true for both p- and b-vectors.
 
     Args:
         motion_vectors (`numpy.ndarray`): Array of shape (N, 11) containing all
@@ -78,8 +82,8 @@ def normalize_vectors(motion_vectors):
     if np.shape(motion_vectors)[0] == 0:
         return motion_vectors
     else:
-        motion_vectors[:, 7] = motion_vectors[:, 7] / motion_vectors[:, 0]  # motion_x
-        motion_vectors[:, 8] = motion_vectors[:, 8] / motion_vectors[:, 0]  # motion_y
+        motion_vectors[:, 7] = -1 * (motion_vectors[:, 7] / np.abs(motion_vectors[:, 0]))  # motion_x
+        motion_vectors[:, 8] = -1 * (motion_vectors[:, 8] / np.abs(motion_vectors[:, 0]))  # motion_y
         motion_vectors[:, 0] = np.sign(motion_vectors[:, 0])
         return motion_vectors
 

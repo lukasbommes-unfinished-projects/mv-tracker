@@ -13,7 +13,7 @@ from lib.dataset.velocities import velocities_from_boxes
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
 
 # for testing
-from lib.dataset.stats import StatsMpeg4UpsampledFull as Stats
+from lib.dataset.stats import StatsMpeg4Static as Stats
 from lib.transforms.transforms import StandardizeMotionVectors
 
 
@@ -47,6 +47,16 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             provide the raw data by setting the codec in the `video_write.py`
             script accordingly and running the script.
 
+        vector_type (`str`): Type of motion vectors to use. Either "p" to use
+            only p-vectors which reference to past frames, "b" to use b-vectors
+            which reference to future frames or "p+b" to use both p- and
+            b-vectors. Note that the options "b" and "p+b" are only available
+            for codec "h264". If `vector_type` is "p" or "b" motion vectors are
+            returned as tensor with 3 channels in RGB order. For "p+b" a list of
+            two tensors each with of 3 channels in RGB order is returned where
+            the first tensor represents the p-vectors and the second tensor the
+            b-vectors.
+
         transforms (`torchvision.transform` of `None`): Transformations which
             are applied to the generated samples. Can be either a single
             transformation or a several transformations composed with
@@ -64,7 +74,8 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         debug (`bool`): If True print debug information.
     """
     def __init__(self, root_dir, mode, batch_size, codec="mpeg4",
-        static_only=False, pad_num_boxes=54, visu=False, debug=False):
+        vector_type="p", static_only=False, pad_num_boxes=54, visu=False,
+        debug=False):
 
         self.DEBUG = debug  # whether to print debug information
 
@@ -108,9 +119,13 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         self.root_dir = root_dir
         self.mode = mode
         self.codec = codec
+        self.vector_type = vector_type
         self.pad_num_boxes = pad_num_boxes
         self.visu = visu
         self.batch_size = batch_size
+
+        if self.codec == "mpeg4" and self.vector_type != "p":
+            raise ValueError("Only vector_type 'p' is available with MPEG4.")
 
         self.get_sequence_lengths_()
 
@@ -292,16 +307,38 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                 self.current_frame_idx += 1
                 continue
 
+            print(motion_vectors)
+
+            motion_vectors_dict = {}
             # convert motion vectors to image (for I frame black image is returned)
-            motion_vectors = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
-            motion_vectors = normalize_vectors(motion_vectors)
-            motion_vectors = get_nonzero_vectors(motion_vectors)
-            motion_vectors_copy = np.copy(motion_vectors)
-            motion_vectors = motion_vectors_to_image(motion_vectors, (frame.shape[1], frame.shape[0]))
-            motion_vectors = torch.from_numpy(motion_vectors).float()
+            if self.vector_type == "p" or self.vector_type == "p+b":
+                motion_vectors_p = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
+                motion_vectors_p = normalize_vectors(motion_vectors_p)
+                motion_vectors_p = get_nonzero_vectors(motion_vectors_p)
+                print(motion_vectors_p[:5, :])
+                motion_vectors_p_for_visu = np.copy(motion_vectors_p)
+                motion_vectors_p = motion_vectors_to_image(motion_vectors_p, (frame.shape[1], frame.shape[0]))
+                motion_vectors_p = torch.from_numpy(motion_vectors_p).float()
+                motion_vectors_dict["p"] = motion_vectors_p
+
+            if self.vector_type == "b" or self.vector_type == "p+b":
+                motion_vectors_b = get_vectors_by_source(motion_vectors, "future")  # get only p vectors
+                motion_vectors_b = normalize_vectors(motion_vectors_b)
+                motion_vectors_b = get_nonzero_vectors(motion_vectors_b)
+                print(motion_vectors_b[:5, :])
+                motion_vectors_b_for_visu = np.copy(motion_vectors_b)
+                motion_vectors_b = motion_vectors_to_image(motion_vectors_b, (frame.shape[1], frame.shape[0]))
+                motion_vectors_b = torch.from_numpy(motion_vectors_b).float()
+                motion_vectors_dict["b"] = motion_vectors_b
 
             if self.visu:
-                frame = draw_motion_vectors(frame, motion_vectors_copy, format='numpy')
+                if self.vector_type == "p":
+                    frame = draw_motion_vectors(frame, motion_vectors_p_for_visu, format='numpy')
+                elif self.vector_type == "b":
+                    frame = draw_motion_vectors(frame, motion_vectors_b_for_visu, format='numpy')
+                elif self.vector_type == "p+b":
+                    frame = draw_motion_vectors(frame, motion_vectors_p_for_visu, format='numpy')
+                    frame = draw_motion_vectors(frame, motion_vectors_b_for_visu, format='numpy')
                 sequence_name = str.split(self.sequences[self.mode][self.current_seq_id], "/")[-1]
                 cv2.putText(frame, 'Sequence: {}'.format(sequence_name), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
                 cv2.putText(frame, 'Frame Idx: {}'.format(self.current_frame_idx), (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
@@ -363,7 +400,7 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             self.frame_return_count += 1
 
             sample = {
-                "motion_vectors": motion_vectors,
+                "motion_vectors_dict": motion_vectors_dict,
                 "boxes_prev": boxes_prev,
                 "boxes": boxes,
                 "velocities": velocities,
@@ -379,40 +416,47 @@ class MotionVectorDataset(torch.utils.data.Dataset):
 # run as python -m lib.dataset.dataset from root dir
 if __name__ == "__main__":
     batch_size = 2
-    codec = "mpeg4"
+    codec = "h264"
+    vector_type = "p+b"
+    static_only = False
+
     datasets = {x: MotionVectorDataset(root_dir='data', batch_size=batch_size,
-        codec=codec, visu=True, debug=True,
-        mode=x) for x in ["train", "val"]}
+        codec=codec, vector_type=vector_type, static_only=static_only, visu=True,
+        debug=True, mode=x) for x in ["train", "val"]}
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=batch_size,
         shuffle=False, num_workers=0) for x in ["train", "val"]}
-    stats = Stats()
 
-    transform = StandardizeMotionVectors(mean=stats.motion_vectors["mean"],
-        std=stats.motion_vectors["std"])
+    #transform = StandardizeMotionVectors(stats=Stats)
 
     step_wise = False
 
     for batch_idx in range(batch_size):
         cv2.namedWindow("frame-{}".format(batch_idx), cv2.WINDOW_NORMAL)
         cv2.resizeWindow("frame-{}".format(batch_idx), 640, 360)
-        cv2.namedWindow("motion_vectors-{}".format(batch_idx), cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("motion_vectors-{}".format(batch_idx), 640, 360)
+
+        if vector_type == "p" or vector_type == "p+b":
+            cv2.namedWindow("motion_vectors_p-{}".format(batch_idx), cv2.WINDOW_NORMAL)
+            cv2.resizeWindow("motion_vectors_p-{}".format(batch_idx), 640, 360)
+        if vector_type == "b" or vector_type == "p+b":
+            cv2.namedWindow("motion_vectors_b-{}".format(batch_idx), cv2.WINDOW_NORMAL)
+            cv2.resizeWindow("motion_vectors_b-{}".format(batch_idx), 640, 360)
 
     for step, sample in enumerate(dataloaders["train"]):
 
-        # apply transforms
-        sample = transform(sample)
+        #sample = transform(sample)
 
         for batch_idx in range(batch_size):
 
+            print("Step: {}, ".format(step), end="")
             frame = sample["frame"][batch_idx].numpy()
-            motion_vectors = sample["motion_vectors"][batch_idx].numpy()
-            motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
-
-            print("step: {}, MVS shape: {}".format(step, motion_vectors.shape))
-
             cv2.imshow("frame-{}".format(batch_idx), frame)
-            cv2.imshow("motion_vectors-{}".format(batch_idx), motion_vectors)
+
+            for vector_type, motion_vectors in sample["motion_vectors_dict"].items():
+                motion_vectors = motion_vectors[batch_idx].numpy()
+                motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
+                cv2.imshow("motion_vectors_{}-{}".format(vector_type, batch_idx), motion_vectors)
+                print("{} motion vectors shape: {}, ".format(vector_type, motion_vectors.shape), end="")
+            print()
 
         key = cv2.waitKey(1)
         if not step_wise and key == ord('s'):

@@ -30,6 +30,9 @@ The sample should be a Python dictionary with the following key values pairs:
     with batch size B, number of boxes N and format [v_xc, v_yc, v_w, v_h] in
     the last dimenion. The last dimenision stand for the velocities of each box
     center point and velocities of box width and height.
+
+- det_boxes_prev (`torch.Tensor`): Same format as `boxes_prev`, but these are
+    the detection boxes in the previous frame rather than the tracked boxes.
 """
 import random
 import pickle
@@ -51,23 +54,21 @@ class StandardizeMotionVectors:
         std (`list` of `float`): Standard deviations per channel by which to
             divide the mean subtracted motion vector image.
     """
-    def __init__(self, stats):
-        self.stats = stats
+    def __init__(self, mean, std):
+        self.mean = torch.tensor(mean)
+        self.std = torch.tensor(std)
 
     def __call__(self, sample):
+        motion_vectors = sample["motion_vectors"].clone()
+        motion_vectors = (motion_vectors - self.mean) / self.std
         sample_transformed = copy.deepcopy(sample)
-        for vector_type, motion_vectors in sample_transformed["motion_vectors_dict"].items():
-            motion_vectors = motion_vectors.clone()
-            mean = torch.tensor(self.stats.motion_vectors[vector_type]["mean"])
-            std = torch.tensor(self.stats.motion_vectors[vector_type]["std"])
-            motion_vectors = (motion_vectors - mean) / std
-            sample_transformed["motion_vectors_dict"][vector_type] = motion_vectors
+        sample_transformed["motion_vectors"] = motion_vectors
         return sample_transformed
 
-    # def __repr__(self):
-    #     repr = "StandardizeMotionVectors (\n    mean={},\n    std={}\n)".format(
-    #         [float(val) for val in self.mean], [float(val) for val in self.std])
-    #     return repr
+    def __repr__(self):
+        repr = "StandardizeMotionVectors (\n    mean={},\n    std={}\n)".format(
+            [float(val) for val in self.mean], [float(val) for val in self.std])
+        return repr
 
 
 class StandardizeVelocities:
@@ -167,8 +168,9 @@ class ScaleImage:
         return_scale (`bool`): If True return the used scaling factor is
             inserted in the output sample with key `scaling_factor`.
 
-        scale_boxes (`bool`): If True scale `boxes_prev` and `boxes` by the
-            scaling factor used to scale the motion vectors/frame.
+        scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
+            `det_boxes_prev` if existing by the scaling factor used to scale the
+            motion vectors/frame.
     """
     def __init__(self, items=["motion_vectors"], scale=600, max_size=1000, return_scale=False, scale_boxes=True):
         self.items = items
@@ -186,7 +188,7 @@ class ScaleImage:
         # scale boxes
         if self.scale_boxes:
             scale_boxes_(sample, sample_transformed, scaling_factor,
-                ["boxes_prev", "boxes"])
+                ["boxes_prev", "boxes", "det_boxes_prev"])
         if self.return_scale:
             sample_transformed["scaling_factor"] = scaling_factor
         return sample_transformed
@@ -216,8 +218,9 @@ class RandomScaleImage:
         return_scale (`bool`): If True return the used scaling factor is
             inserted in the output sample with key `scaling_factor`.
 
-        scale_boxes (`bool`): If True scale `boxes_prev` and `boxes` by the
-            scaling factor used to scale the motion vectors/frame.
+        scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
+            `det_boxes_prev` if existing by the scaling factor used to scale the
+            motion vectors/frame.
     """
     def __init__(self, items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=False, scale_boxes=True):
         self.items = items
@@ -245,7 +248,7 @@ class RandomScaleImage:
         # scale boxes
         if self.scale_boxes:
             scale_boxes_(sample, sample_transformed, scaling_factor,
-                ["boxes_prev", "boxes"])
+                ["boxes_prev", "boxes", "det_boxes_prev"])
         if self.return_scale:
             sample_transformed["scaling_factor"] = scaling_factor
         return sample_transformed
@@ -297,6 +300,10 @@ def flip_(sample, sample_transformed, direction):
         boxes = sample["boxes"].clone()
     except KeyError:
         boxes = None
+    try:
+        det_boxes_prev = sample["det_boxes_prev"].clone()
+    except KeyError:
+        det_boxes_prev = None
     # mvs have shape (H, W, C) or (B, H, W, C)
     image_width = motion_vectors.shape[-2]
     image_height = motion_vectors.shape[-3]
@@ -308,6 +315,9 @@ def flip_(sample, sample_transformed, direction):
         if boxes is not None:
             boxes[:, 1:] = flip_boxes_(boxes[:, 1:], direction,
                 image_width, image_height)
+        if det_boxes_prev is not None:
+            det_boxes_prev[:, 1:] = flip_boxes_(det_boxes_prev[:, 1:],
+                direction, image_width, image_height)
         velocities = flip_velocities_(velocities, direction)
     elif motion_vectors.ndim == 4:
         motion_vectors_flipped = []
@@ -322,6 +332,10 @@ def flip_(sample, sample_transformed, direction):
                 boxes[batch_idx, :, 1:] = flip_boxes_(
                     boxes[batch_idx, :, 1:], direction, image_width,
                     image_height)
+            if det_boxes_prev is not None:
+                det_boxes_prev[batch_idx, :, 1:] = flip_boxes_(
+                    det_boxes_prev[batch_idx, :, 1:], direction, image_width,
+                    image_height)
             velocities[batch_idx, ...] = flip_velocities_(
                 velocities[batch_idx, ...], direction)
         motion_vectors = np.stack(motion_vectors_flipped, axis=0)
@@ -335,6 +349,8 @@ def flip_(sample, sample_transformed, direction):
         sample_transformed["boxes_prev"] = boxes_prev
     if boxes is not None:
         sample_transformed["boxes"] = boxes
+    if det_boxes_prev is not None:
+        sample_transformed["det_boxes_prev"] = det_boxes_prev
     return sample_transformed
 
 
