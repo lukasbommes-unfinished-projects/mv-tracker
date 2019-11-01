@@ -61,9 +61,9 @@ def get_nonzero_vectors(motion_vectors):
 def normalize_vectors(motion_vectors):
     """Normalizes motion vectors to the past frame as reference frame.
 
-    The source value in the first column is set to -1 for all frames. The x and
-    y motion values are scaled accordingly. Vector source position and
-    destination position are unchanged.
+    The source value in the first column is set to -1 for all p-vectors and
+    set to 1 for all b-vectors. The x and y motion values are scaled
+    accordingly. Vector source position and destination position are unchanged.
 
     Args:
         motion_vectors (`numpy.ndarray`): Array of shape (N, 11) containing all
@@ -80,8 +80,34 @@ def normalize_vectors(motion_vectors):
     else:
         motion_vectors[:, 7] = motion_vectors[:, 7] / motion_vectors[:, 0]  # motion_x
         motion_vectors[:, 8] = motion_vectors[:, 8] / motion_vectors[:, 0]  # motion_y
-        motion_vectors[:, 0] = -1 * np.ones_like(motion_vectors[:, 0])
+        motion_vectors[:, 0] = np.sign(motion_vectors[:, 0])
         return motion_vectors
+
+
+# def normalize_vectors(motion_vectors):
+#     """Normalizes motion vectors to the past frame as reference frame.
+#
+#     The source value in the first column is set to -1 for all frames. The x and
+#     y motion values are scaled accordingly. Vector source position and
+#     destination position are unchanged.
+#
+#     Args:
+#         motion_vectors (`numpy.ndarray`): Array of shape (N, 11) containing all
+#             N motion vectors inside a frame. N = 0 is allowed meaning no vectors
+#             are present in the frame.
+#
+#     Returns:
+#         motion_vectors (`numpy.ndarray`): Array of shape (M, 11) containing the
+#         normalized motion vectors. If N = 0 => M = 0 that is an empty numpy
+#         array of shape (0, 11) is returned.
+#     """
+#     if np.shape(motion_vectors)[0] == 0:
+#         return motion_vectors
+#     else:
+#         motion_vectors[:, 7] = motion_vectors[:, 7] / motion_vectors[:, 0]  # motion_x
+#         motion_vectors[:, 8] = motion_vectors[:, 8] / motion_vectors[:, 0]  # motion_y
+#         motion_vectors[:, 0] = -1 * np.ones_like(motion_vectors[:, 0])
+#         return motion_vectors
 
 
 def motion_vectors_to_hsv_image(motion_vectors, frame_shape=(1920, 1080)):

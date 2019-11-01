@@ -26,7 +26,7 @@ trained via cmd: python train_new.py --static_only --gpu 1 --scales 1.0 --schedu
 
 2019-10-29_07-56-42 Settings similar to 2019-10-28_15-12-38, but uses full dataset including moving cameras
 trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled
--> test performance [...]
+-> test performance is much worse than that of the old model with same settings but old train code (Oct23_09-25-34_295b671b36a0)
 
 2019-10-29_07-16-10 Same as 2019-10-29_07-14-07, but with initial learning rate 1e-4 instead of 1e-5
 -> test performance is slightly better than that of 2019-10-29_07-14-07 on test video, but fails mostly on val video
