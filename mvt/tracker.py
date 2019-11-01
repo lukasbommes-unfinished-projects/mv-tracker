@@ -9,19 +9,18 @@ from mvt.utils import draw_motion_vectors, draw_boxes
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, use_kalman=False):
+    def __init__(self, iou_threshold, use_only_p_vectors=False, use_kalman=False):
         self.iou_threshold = iou_threshold
+        self.use_only_p_vectors = use_only_p_vectors
         self.use_kalman = use_kalman
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
         self.last_motion_vectors = np.empty(shape=(0, 10))
-        self.debug_data = None
         if self.use_kalman:
             self.filters = []
 
 
     def update(self, motion_vectors, frame_type, detection_boxes):
-
         # bring boxes into next state
         self.predict(motion_vectors, frame_type)
 
@@ -61,18 +60,13 @@ class MotionVectorTracker:
             if self.use_kalman:
                 self.filters.pop(t)
 
-        self.debug_data = {
-            "box_ids": self.box_ids,
-            "boxes": self.boxes,
-            "type": "update"
-        }
-
 
     def predict(self, motion_vectors, frame_type):
-
         # I frame has no motion vectors
         if frame_type != "I":
 
+            if self.use_only_p_vectors:
+                motion_vectors = trackerlib.get_vectors_by_source(motion_vectors, "past")
             # get non-zero motion vectors and normalize them to point to the past frame (source = -1)
             motion_vectors = trackerlib.get_nonzero_vectors(motion_vectors)
             motion_vectors = trackerlib.normalize_vectors(motion_vectors)
@@ -90,20 +84,9 @@ class MotionVectorTracker:
                 self.filters[t].update(self.boxes[t])
                 self.boxes[t] = self.filters[t].get_box_from_state()
 
-        self.debug_data = {
-            "box_ids": self.box_ids,
-            "boxes": self.boxes,
-            "shifts": shifts,
-            "motion_vector_subsets": motion_vector_subsets,
-            "type": "predict"
-        }
-
 
     def get_boxes(self):
         return self.boxes
 
     def get_box_ids(self):
         return self.box_ids
-
-    def get_debug_data(self):
-        return self.debug_data

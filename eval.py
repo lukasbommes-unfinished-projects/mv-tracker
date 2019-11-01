@@ -28,45 +28,76 @@ of the trackers is measured and stored into the `time_perf.log` file.
 
 The output directory is called `eval_output` and has the following structure
 
-eval_output/<benchmark>/<mode>/<codec>/<tracker_type>/<x>/<tracker_iou_thres>/<detector_interval>
+eval_output/<benchmark>/<mode>/<codec>/<vector_type>/<tracker_type>/<x>/
+    <tracker_iou_thres>/<detector_interval>
 
 In case of the baseline tracker `x` in the above path is ommited. For the deep
 trackers, this is the weights file used in the evaluation.
 
-Example usage:
-python eval.py MOT17 train mpeg4 deep 0.1 4 --deep_tracker_weights_file=models/tracker/14_10_2019_01.pth --root_dir=data --gpu 0
+Example usages:
+python eval.py --benchmark=MOT17 --mode=train --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4
+python eval.py --benchmark=MOT17 --mode=train --codec=mpeg4 --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --deep_tracker_weights_file=models/tracker/14_10_2019_01.pth --root_dir=data --gpu 0
+
+When providing a set of sequences via the "sequences" argument the values for
+benchmark and mode are ignored and boxes are computed for the specified
+sequences only.
+
+Example:
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4 --sequences MOT17/train/MOT17-02-DPM MOT17/train/MOT17-02-FRCNN
 """, formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('benchmark', type=str, help='Either "MOT16" or "MOT17". Determines which detections are loaded.', default='MOT17')
-    parser.add_argument('mode', type=str, help='Either "train" or "test". Whether to compute metrics on train or test split of MOT data.', default='train')
-    parser.add_argument('codec', type=str, help='Either "mpeg4" or "h264" determines the encoding type of the video.', default='mpeg4')
-    parser.add_argument('tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
-    parser.add_argument('tracker_iou_thres', type=float, help='The minimum IoU needed to match a tracked boy with a detected box during data assocation step.', default=0.1)
-    parser.add_argument('detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
+    parser.add_argument('--benchmark', type=str, help='Either "MOT16" or "MOT17". Determines which detections are loaded.', default='MOT17')
+    parser.add_argument('--mode', type=str, help='Either "train" or "test". Whether to compute metrics on train or test split of MOT data.', default='train')
+    parser.add_argument('--codec', type=str, help='Either "mpeg4" or "h264" determines the encoding type of the video.', default='mpeg4')
+    parser.add_argument('--vector_type', type=str, help='Either "p" to use only p vectors or "pb" to use both p and b vectors ("pb" is only valid if codec is h264).', default='p')
+    parser.add_argument('--tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
+    parser.add_argument('--tracker_iou_thres', type=float, help='The minimum IoU needed to match a tracked boy with a detected box during data assocation step.', default=0.1)
+    parser.add_argument('--detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
     parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
     parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
     parser.add_argument('--gpu', type=int, help='Index of the GPU on which to run inference of deep tracker. Pass -1 to run on CPU.', default=0)
+
+    parser.add_argument('--sequences', nargs='+', type=str, help='Compute boxes on the specified sequences only. If provided settings for benchmark and mode are ignored.',)
     return parser.parse_args()
 
 
 if __name__ == "__main__":
 
     args = parse_args()
+    print(args.sequences)
 
     eval_detectors = ["FRCNN", "SDP", "DPM"]  # which detections to use, can contain "FRCNN", "SDP", "DPM"
 
-    data_dirs = sorted(glob.glob(os.path.join(args.root_dir, args.benchmark, "{}/*".format(args.mode))))
+    # select either custom sequences or MOT16/MOT17 sequences
+    if args.sequences:
+        data_dirs = [os.path.join(args.root_dir, sequence) for sequence in args.sequences]
+        output_directory_root = os.path.join('eval_output', "custom")
+    else:
+        data_dirs = sorted(glob.glob(os.path.join(args.root_dir, args.benchmark, "{}/*".format(args.mode))))
+        output_directory_root = os.path.join('eval_output', args.benchmark, args.mode)
 
+        # generate output directory
     if args.tracker_type == "baseline":
-        output_directory = os.path.join('eval_output', args.benchmark, args.mode, args.codec,
-            args.tracker_type, "iou-thres-{}".format(args.tracker_iou_thres),
-            "det-interval-{}".format(args.detector_interval))
+        if args.codec == "h264":
+            output_directory = os.path.join(output_directory_root, args.codec,
+                args.tracker_type, args.vector_type, "iou-thres-{}".format(args.tracker_iou_thres),
+                "det-interval-{}".format(args.detector_interval))
+        elif args.codec == "mpeg4":
+            output_directory = os.path.join(output_directory_root, args.codec,
+                args.tracker_type, "iou-thres-{}".format(args.tracker_iou_thres),
+                "det-interval-{}".format(args.detector_interval))
     elif args.tracker_type == "deep":
         weights_file_name = str.split(args.deep_tracker_weights_file, "/")[-2]  # pick out the datetime
-        output_directory = os.path.join('eval_output', args.benchmark, args.mode, args.codec,
-            args.tracker_type, weights_file_name,
-            "iou-thres-{}".format(args.tracker_iou_thres),
-            "det-interval-{}".format(args.detector_interval))
+        if args.codec == "h264":
+            output_directory = os.path.join(output_directory_root, args.codec,
+                args.tracker_type, weights_file_name, args.vector_type,
+                "iou-thres-{}".format(args.tracker_iou_thres),
+                "det-interval-{}".format(args.detector_interval))
+        elif args.codec == "mpeg4":
+            output_directory = os.path.join(output_directory_root, args.codec,
+                args.tracker_type, weights_file_name,
+                "iou-thres-{}".format(args.tracker_iou_thres),
+                "det-interval-{}".format(args.detector_interval))
 
     # if output directory exists exit this process
     try:
@@ -118,7 +149,9 @@ if __name__ == "__main__":
 
         # init tracker
         if args.tracker_type == "baseline":
-            tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres)
+            use_only_p_vectors = (args.vector_type == "p")
+            tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres,
+                use_only_p_vectors=use_only_p_vectors)
         elif args.tracker_type == "deep":
             tracker = MotionVectorTrackerDeep(
                 iou_threshold=args.tracker_iou_thres,
