@@ -9,8 +9,9 @@ from mvt.utils import draw_motion_vectors, draw_boxes
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, codec="mpeg4", vector_type="p"):
+    def __init__(self, iou_threshold, vector_type="p"):
         self.iou_threshold = iou_threshold
+        self.vector_type = vector_type
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
         self.last_motion_vectors = np.empty(shape=(0, 10))
@@ -54,7 +55,9 @@ class MotionVectorTracker:
 
             # get non-zero motion vectors and normalize them to point to the past frame (source = -1)
             motion_vectors = trackerlib.get_nonzero_vectors(motion_vectors)
+            print(motion_vectors[:20, :])
             motion_vectors = trackerlib.normalize_vectors(motion_vectors)
+            print(motion_vectors[:20, :])
 
             self.last_motion_vectors = motion_vectors
 

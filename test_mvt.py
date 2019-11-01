@@ -26,7 +26,9 @@ if __name__ == "__main__":
     detector_interval = 20
     tracker_iou_thres = 0.05
 
-    tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres)
+    tracker_baseline = MotionVectorTrackerBaseline(codec="mpeg4",
+        vector_type="p",
+        iou_threshold=tracker_iou_thres)
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
