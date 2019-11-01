@@ -166,13 +166,13 @@ def train(model, criterion, optimizer, scheduler, num_epochs, visu,
 
             if phase == "val" and epoch_mean_iou >= best_mean_iou:
                 best_mean_iou = epoch_mean_iou
-                if save_mode:
+                if save_model:
                     best_model_wts = copy.deepcopy(model.state_dict())
                     logger.info("Saving model with highest IoU so far")
                     torch.save(best_model_wts, os.path.join(outdir, "model_highest_iou.pth"))
 
             # store every model during the last 10 epochs of training
-            if save_mode and phase == "val" and (num_epochs - epoch) <= 10:
+            if save_model and phase == "val" and (num_epochs - epoch) <= 10:
                 model_wts = copy.deepcopy(model.state_dict())
                 torch.save(model_wts, os.path.join(outdir, "model_epoch_{}.pth".format(epoch)))
 
