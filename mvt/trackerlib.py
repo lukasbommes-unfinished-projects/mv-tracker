@@ -1,9 +1,6 @@
 import numpy as np
-#import cv2
 import scipy
 from scipy import optimize
-from filterpy.kalman import KalmanFilter
-from filterpy.common import Q_discrete_white_noise, Q_continuous_white_noise
 
 
 def get_vectors_by_source(motion_vectors, source):

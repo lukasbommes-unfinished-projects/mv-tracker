@@ -9,16 +9,15 @@ from mvt.utils import draw_motion_vectors, draw_boxes
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, vector_type="p"):
+    def __init__(self, iou_threshold, use_only_p_vectors):
         self.iou_threshold = iou_threshold
-        self.vector_type = vector_type
+        self.use_only_p_vectors = use_only_p_vectors
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
         self.last_motion_vectors = np.empty(shape=(0, 10))
 
 
     def update(self, motion_vectors, frame_type, detection_boxes):
-
         # bring boxes into next state
         self.predict(motion_vectors, frame_type)
 
@@ -49,15 +48,13 @@ class MotionVectorTracker:
 
 
     def predict(self, motion_vectors, frame_type):
-
         # I frame has no motion vectors
         if frame_type != "I":
-
             # get non-zero motion vectors and normalize them to point to the past frame (source = -1)
+            if self.use_only_p_vectors:
+                motion_vectors = trackerlib.get_vectors_by_source(motion_vectors, "past")
             motion_vectors = trackerlib.get_nonzero_vectors(motion_vectors)
-            print(motion_vectors[:20, :])
             motion_vectors = trackerlib.normalize_vectors(motion_vectors)
-            print(motion_vectors[:20, :])
 
             self.last_motion_vectors = motion_vectors
 

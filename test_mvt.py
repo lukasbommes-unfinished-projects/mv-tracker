@@ -16,7 +16,7 @@ from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 if __name__ == "__main__":
 
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-mpeg4-1.0.mp4"  # train set, static cam
-    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-mpeg4-1.0.mp4"  # test set, static cam
+    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-h264-1.0.mp4"  # test set, static cam
     #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-mpeg4.mp4"  # test set, moving cam
     #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-mpeg4.mp4"  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-mpeg4.mp4"  # val set, moving cam
@@ -26,8 +26,7 @@ if __name__ == "__main__":
     detector_interval = 20
     tracker_iou_thres = 0.05
 
-    tracker_baseline = MotionVectorTrackerBaseline(codec="mpeg4",
-        vector_type="p",
+    tracker_baseline = MotionVectorTrackerBaseline(use_only_p_vectors=True,
         iou_threshold=tracker_iou_thres)
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
@@ -45,7 +44,7 @@ if __name__ == "__main__":
         raise RuntimeError("Could not open the video file")
 
     frame_idx = 0
-    step_wise = False
+    step_wise = True
 
     # box colors
     color_detection = (0, 0, 150)
