@@ -1,0 +1,3 @@
+MPEG4:
+DEFAULT:
+- qscale = 31 (variable bit rate)

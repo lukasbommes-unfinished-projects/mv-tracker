@@ -64,7 +64,6 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
 if __name__ == "__main__":
 
     args = parse_args()
-    print(args.sequences)
 
     eval_detectors = ["FRCNN", "SDP", "DPM"]  # which detections to use, can contain "FRCNN", "SDP", "DPM"
 
@@ -87,7 +86,9 @@ if __name__ == "__main__":
                 args.tracker_type, "iou-thres-{}".format(args.tracker_iou_thres),
                 "det-interval-{}".format(args.detector_interval))
     elif args.tracker_type == "deep":
-        weights_file_name = str.split(args.deep_tracker_weights_file, "/")[-2]  # pick out the datetime
+        weights_file_name_date = str.split(args.deep_tracker_weights_file, "/")[-2]
+        weights_file_name_model = str.split(args.deep_tracker_weights_file, "/")[-1][:-4]
+        weights_file_name = "_".join([weights_file_name_date, weights_file_name_model])
         if args.codec == "h264":
             output_directory = os.path.join(output_directory_root, args.codec,
                 args.tracker_type, weights_file_name, args.vector_type,

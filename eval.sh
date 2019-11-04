@@ -11,30 +11,49 @@ VAL_SEQUENCES=('MOT17/train/MOT17-09-DPM'
                 'MOT17/train/MOT17-10-FRCNN'
                 'MOT17/train/MOT17-10-SDP')
 
-python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=20 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=15 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=10 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=8 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=6 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=2 --sequences ${VAL_SEQUENCES[*]}
+########################### Baseline Tracker ###########################
 
-python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=20 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=15 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=10 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=8 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=6 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=2 --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
 
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=20 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=15 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=10 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=8 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=6 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4 --sequences ${VAL_SEQUENCES[*]}
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=2 --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=h264 --vector_type=pb --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
 
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]}
+
+
+########################### Deep Tracker ###########################
+
+# MPEG4, Full dataset, P vectors, old train code
+python eval.py --codec=mpeg4 --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-23_09-25-34/model_final.pth
+python eval.py --codec=mpeg4 --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-23_09-25-34/model_highest_iou.pth
+python eval.py --codec=mpeg4 --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-23_09-25-34/model_lowest_loss.pth
+
+# MPEG4, Full dataset, P vectors, new train code
+python eval.py --codec=mpeg4 --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-30_02-47-42/model_final.pth
+python eval.py --codec=mpeg4 --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-30_02-47-42/model_highest_iou.pth
+python eval.py --codec=mpeg4 --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-30_02-47-42/model_lowest_loss.pth
+
+# H264, Full dataset, P vectors, new train code
+python eval.py --codec=h264 --vector_type=p --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-29_09-35-25/model_final.pth
+python eval.py --codec=h264 --vector_type=p --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-29_09-35-25/model_highest_iou.pth
+python eval.py --codec=h264 --vector_type=p --tracker_type=deep --tracker_iou_thres=0.1 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-10-29_09-35-25/model_lowest_loss.pth
 
 
 # baseline tracker
