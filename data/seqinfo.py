@@ -1,4 +1,4 @@
-scales = [1.0, 0.75, 0.5]  # encode video at 100 %, 75 % and 50 % of original size
+scales = [0.25]#[1.0, 0.75, 0.5]  # encode video at 100 %, 75 % and 50 % of original size
 
 frame_rates = {
     "MOT17": {

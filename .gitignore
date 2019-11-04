@@ -23,3 +23,5 @@ __pycache__/
 /data/MOT17/
 /data/MOT15/
 /data/MOT16/
+
+/old/old_eval_results/

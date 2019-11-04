@@ -48,6 +48,8 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
 
     parser.add_argument('--benchmark', type=str, help='Either "MOT16" or "MOT17". Determines which detections are loaded.', default='MOT17')
     parser.add_argument('--mode', type=str, help='Either "train" or "test". Whether to compute metrics on train or test split of MOT data.', default='train')
+    parser.add_argument('--sequences', nargs='+', type=str, help='Compute boxes on the specified sequences only. If provided settings for benchmark and mode are ignored.')
+    parser.add_argument('--scale', type=float, help='Scaling factor for the input sequence relative to the original sequence, e.g. if original sequence is 1920 x 1080, but was reencoded to 960 x 540 then scale is 0.5.', default=1.0)
     parser.add_argument('--codec', type=str, help='Either "mpeg4" or "h264" determines the encoding type of the video.', default='mpeg4')
     parser.add_argument('--vector_type', type=str, help='Either "p" to use only p vectors or "pb" to use both p and b vectors ("pb" is only valid if codec is h264).', default='p')
     parser.add_argument('--tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
@@ -56,8 +58,6 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
     parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
     parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
     parser.add_argument('--gpu', type=int, help='Index of the GPU on which to run inference of deep tracker. Pass -1 to run on CPU.', default=0)
-
-    parser.add_argument('--sequences', nargs='+', type=str, help='Compute boxes on the specified sequences only. If provided settings for benchmark and mode are ignored.',)
     return parser.parse_args()
 
 
@@ -78,25 +78,43 @@ if __name__ == "__main__":
         # generate output directory
     if args.tracker_type == "baseline":
         if args.codec == "h264":
-            output_directory = os.path.join(output_directory_root, args.codec,
-                args.tracker_type, args.vector_type, "iou-thres-{}".format(args.tracker_iou_thres),
+            output_directory = os.path.join(
+                output_directory_root,
+                "scale-{}".format(args.scale),
+                args.codec,
+                args.tracker_type,
+                args.vector_type,
+                "iou-thres-{}".format(args.tracker_iou_thres),
                 "det-interval-{}".format(args.detector_interval))
         elif args.codec == "mpeg4":
-            output_directory = os.path.join(output_directory_root, args.codec,
-                args.tracker_type, "iou-thres-{}".format(args.tracker_iou_thres),
+            output_directory = os.path.join(
+                output_directory_root,
+                "scale-{}".format(args.scale),
+                args.codec,
+                args.tracker_type,
+                "iou-thres-{}".format(args.tracker_iou_thres),
                 "det-interval-{}".format(args.detector_interval))
     elif args.tracker_type == "deep":
         weights_file_name_date = str.split(args.deep_tracker_weights_file, "/")[-2]
         weights_file_name_model = str.split(args.deep_tracker_weights_file, "/")[-1][:-4]
         weights_file_name = "_".join([weights_file_name_date, weights_file_name_model])
         if args.codec == "h264":
-            output_directory = os.path.join(output_directory_root, args.codec,
-                args.tracker_type, weights_file_name, args.vector_type,
+            output_directory = os.path.join(
+                output_directory_root,
+                "scale-{}".format(args.scale),
+                args.codec,
+                args.tracker_type,
+                weights_file_name,
+                args.vector_type,
                 "iou-thres-{}".format(args.tracker_iou_thres),
                 "det-interval-{}".format(args.detector_interval))
         elif args.codec == "mpeg4":
-            output_directory = os.path.join(output_directory_root, args.codec,
-                args.tracker_type, weights_file_name,
+            output_directory = os.path.join(
+                output_directory_root,
+                "scale-{}".format(args.scale),
+                args.codec,
+                args.tracker_type, 
+                weights_file_name,
                 "iou-thres-{}".format(args.tracker_iou_thres),
                 "det-interval-{}".format(args.detector_interval))
 
@@ -136,10 +154,10 @@ if __name__ == "__main__":
             # get the video file from FRCNN sub directory
             sequence_name_without_detector = '-'.join(sequence_name.split('-')[:-1])
             sequence_name_frcnn = "{}-FRCNN".format(sequence_name_without_detector)
-            video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}-1.0.mp4".format(sequence_name_frcnn, args.codec))
+            video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}-{}.mp4".format(sequence_name_frcnn, args.codec, args.scale))
 
         else:
-            video_file = os.path.join(data_dir, "{}-{}-1.0.mp4".format(sequence_name, args.codec))
+            video_file = os.path.join(data_dir, "{}-{}-{}.mp4".format(sequence_name, args.codec, args.scale))
 
         print("Loading video file from", video_file)
 
@@ -188,9 +206,9 @@ if __name__ == "__main__":
                 if frame_idx % args.detector_interval == 0:
                     t_start_update = time.process_time()
                     if args.tracker_type == "baseline":
-                        tracker.update(motion_vectors, frame_type, detections[frame_idx])
+                        tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale)
                     elif args.tracker_type == "deep":
-                        tracker.update(motion_vectors, frame_type, detections[frame_idx], frame.shape)
+                        tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale, frame.shape)
                     dts[sequence_name]["update"].append(time.process_time() - t_start_update)
 
 
@@ -205,8 +223,11 @@ if __name__ == "__main__":
 
                 dts[sequence_name]["total"].append(time.process_time() - t_start_total)
 
-                track_boxes = tracker.get_boxes()
                 track_ids = tracker.get_box_ids()
+                track_boxes = tracker.get_boxes()
+                # revert scaling so that comparison with unscaled ground truth in compute_metrics.py makes sense
+                track_boxes = track_boxes / args.scale
+
 
                 for track_box, track_id in zip(track_boxes, track_ids):
                     csv_writer.writerow([frame_idx+1, track_id, track_box[0], track_box[1],
