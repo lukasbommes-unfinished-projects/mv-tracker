@@ -10,11 +10,11 @@ from lib.dataset.loaders import load_groundtruth
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
     normalize_vectors, motion_vectors_to_image, motion_vectors_to_grid, \
     motion_vectors_to_grid_interpolated
-from lib.dataset.velocities import velocities_from_boxes
+from lib.dataset.velocities import velocities_from_boxes, velocities_from_boxes_2d
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
 
 # for testing
-from lib.dataset.stats import StatsMpeg4DenseStaticMultiscale as Stats
+from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 
@@ -288,7 +288,10 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         _, idx_1, idx_0 = np.intersect1d(gt_ids, gt_ids_prev, assume_unique=True, return_indices=True)
         boxes = torch.from_numpy(gt_boxes[idx_1]).float()
         boxes_prev = torch.from_numpy(gt_boxes_prev[idx_0]).float()
-        velocities = velocities_from_boxes(boxes_prev, boxes)
+        if self.mvs_mode == "upsampled":
+            velocities = velocities_from_boxes(boxes_prev, boxes)
+        elif self.mvs_mode == "dense":
+            velocities = velocities_from_boxes_2d(boxes_prev, boxes)
         if self.visu:
             frame = draw_boxes(frame, boxes, gt_ids, color=(255, 255, 255))
             frame = draw_boxes(frame, boxes_prev, gt_ids_prev, color=(200, 200, 200))
@@ -340,9 +343,9 @@ if __name__ == "__main__":
     batch_size = 1
     codec = "mpeg4"
     mvs_mode = "dense"
-    static_only = False
+    static_only = True
     exclude_keyframes = True
-    scales = [1.0, 0.75, 0.5]
+    scales = [1.0]
 
     transforms = {
         "train": torchvision.transforms.Compose([

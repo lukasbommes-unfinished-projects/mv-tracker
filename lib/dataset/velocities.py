@@ -111,7 +111,7 @@ def box_from_velocities(boxes_prev, velocities, sigma=1.5):
     Args:
         boxes_prev (`torch.Tensor`): Bounding boxes in previous frame. Shape [B, N, 4]
             where B is the batch size and N the number of bounding boxes.
-            Each row in this tensor corresponds to one bounding box in format 
+            Each row in this tensor corresponds to one bounding box in format
             [x, y, w, h] where x and y are the coordinates of the top left
             corner and w and h are box width and height.
 
@@ -142,6 +142,75 @@ def box_from_velocities(boxes_prev, velocities, sigma=1.5):
     yc = (h_p / (math.sqrt(2) * sigma) * v_yc + yc_p).unsqueeze(-1)
     w = (w_p * torch.exp(v_w)).unsqueeze(-1)
     h = (h_p * torch.exp(v_h)).unsqueeze(-1)
+    x = xc - 0.5 * w
+    y = yc - 0.5 * h
+    return torch.cat([x, y, w, h], -1)
+
+
+def velocities_from_boxes_2d(boxes_prev, boxes):
+    """Computes bounding box center point velocities.
+
+    Args:
+        boxes_prev (`torch.Tensor`): Bounding boxes in previous frame. Shape [N, 4]
+            where N is the number of bounding boxes. Each row in this tensor corresponds
+            to one bounding box in format [x, y, w, h] where x and y are the coordinates
+            of the top left corner and w and h are box width and height.
+
+        boxes (`torch.Tensor`): Bounding boxes in current frame. Shape [N, 4]
+            where N is the number of bounding boxes. Same format as boxes_prev.
+
+    Returns:
+        (`torch.Tensor`) velocities of box coordinates in current frame. Shape [N, 2].
+        Each row in this tensor corresponds to a box velocity in format [v_xc, v_yc]
+        where v_xc and v_yc are velocities of the box center point.
+
+    Ensure that ordering of boxes in both tensors is consistent and that the number of boxes
+    is the same.
+    """
+    w = boxes[:, 2]
+    h = boxes[:, 3]
+    xc = boxes[:, 0] + 0.5 * w
+    yc = boxes[:, 1] + 0.5 * h
+    w_p = boxes_prev[:, 2]
+    h_p = boxes_prev[:, 3]
+    xc_p = boxes_prev[:, 0] + 0.5 * w_p
+    yc_p = boxes_prev[:, 1] + 0.5 * h_p
+    v_xc = (1 / w_p * (xc - xc_p)).unsqueeze(-1)
+    v_yc = (1 / h_p * (yc - yc_p)).unsqueeze(-1)
+    return torch.cat([v_xc, v_yc], -1)
+
+
+def box_from_velocities_2d(boxes_prev, velocities):
+    """Computes bounding boxes from previous boxes and center point velocities.
+
+    Args:
+        boxes_prev (`torch.Tensor`): Bounding boxes in previous frame. Shape [N, 4]
+            where N is the number of bounding boxes. Each row in this tensor corresponds
+            to one bounding box in format  [x, y, w, h] where x and y are the coordinates
+            of the top left corner and w and h are box width and height.
+
+        velocities (`torch.Tensor`): Box velocities in current frame. Shape [N, 2]
+            where N is the number of bounding boxes. Each row in this tensor corresponds
+            to a box velocity in format [v_xc, v_yc, v_w, v_h] where v_xc and v_yc are
+            velocities of the box center point and v_w and v_h.
+
+    Returns:
+        (`torch.Tensor`) Bounding boxes in current frame. Shape [N, 4]. Same format
+        as boxes_prev.
+
+    Ensure that ordering of boxes and velocities in both tensors is consistent that is
+    box in row i should correspond to velocities in row i.
+    """
+    w_p = boxes_prev[:, 2]
+    h_p = boxes_prev[:, 3]
+    xc_p = boxes_prev[:, 0] + 0.5 * w_p
+    yc_p = boxes_prev[:, 1] + 0.5 * h_p
+    v_xc = velocities[:, 0]
+    v_yc = velocities[:, 1]
+    xc = (w_p * v_xc + xc_p).unsqueeze(-1)
+    yc = (h_p * v_yc + yc_p).unsqueeze(-1)
+    w = w_p.unsqueeze(-1)
+    h = h_p.unsqueeze(-1)
     x = xc - 0.5 * w
     y = yc - 0.5 * h
     return torch.cat([x, y, w, h], -1)
@@ -215,7 +284,6 @@ if __name__ == "__main__":
     velocities = velocities_from_boxes(boxes_prev, boxes)
     print(velocities)
     print(velocities.shape)
-
 
     box = box_from_velocities(boxes_prev, velocities)
     print(box)

@@ -14,7 +14,7 @@ class PropagationNetwork(nn.Module):
         super(PropagationNetwork, self).__init__()
 
         self.POOLING_SIZE = 7  # the ROIs are split into m x m regions
-        self.FIXED_BLOCKS = 0
+        self.FIXED_BLOCKS = 2
 
         resnet = resnet18()
         resnet_weights = model_zoo.load_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
@@ -30,10 +30,10 @@ class PropagationNetwork(nn.Module):
             resnet.relu,
             resnet.layer2,
             resnet.relu,
-            #resnet.layer3,
-            #resnet.relu,
-            #resnet.layer4,
-            #resnet.relu
+            resnet.layer3,
+            resnet.relu,
+            resnet.layer4,
+            resnet.relu
         ]
         self.base = nn.Sequential(*base)
 
@@ -47,7 +47,7 @@ class PropagationNetwork(nn.Module):
         if self.FIXED_BLOCKS >= 1: # fix first 1 block
             for p in self.base[4].parameters(): p.requires_grad = False
 
-        self.conv1x1 = nn.Conv2d(128, 4*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
+        self.conv1x1 = nn.Conv2d(512, 2*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
         self.pooling = nn.AvgPool2d(kernel_size=self.POOLING_SIZE, stride=self.POOLING_SIZE)
 
         #self.init_layers()
@@ -69,10 +69,10 @@ class PropagationNetwork(nn.Module):
         boxes_prev_ = change_box_format(boxes_prev)
 
         # compute ratio of input size to size of base output
-        x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/4)
+        x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/8)
         x = self.pooling(x)
         x = x.squeeze()
-        velocities_pred = x.view(-1, 4)
+        velocities_pred = x.view(-1, 2)
         return velocities_pred
 
 
@@ -88,16 +88,16 @@ class PropagationNetwork(nn.Module):
         'base.6.0.downsample.0.weight',
         'base.6.2.conv1.weight',
         'base.6.2.conv2.weight',
-        #'base.8.0.conv1.weight',
-        #'base.8.0.conv2.weight',
-        #'base.8.0.downsample.0.weight',
-        #'base.8.2.conv1.weight',
-        #'base.8.2.conv2.weight',
-        #'base.10.0.conv1.weight',
-        #'base.10.0.conv2.weight',
-        #'base.10.0.downsample.0.weight',
-        #'base.10.2.conv1.weight',
-        #'base.10.2.conv2.weight',
+        'base.8.0.conv1.weight',
+        'base.8.0.conv2.weight',
+        'base.8.0.downsample.0.weight',
+        'base.8.2.conv1.weight',
+        'base.8.2.conv2.weight',
+        'base.10.0.conv1.weight',
+        'base.10.0.conv2.weight',
+        'base.10.0.downsample.0.weight',
+        'base.10.2.conv1.weight',
+        'base.10.2.conv2.weight',
         'conv1x1.weight',
     ]
 

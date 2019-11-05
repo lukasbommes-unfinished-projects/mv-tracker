@@ -17,7 +17,7 @@ from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vectors, \
     normalize_vectors, motion_vectors_to_image, motion_vectors_to_grid, \
     motion_vectors_to_grid_interpolated
-from lib.dataset.velocities import box_from_velocities
+from lib.dataset.velocities import box_from_velocities, box_from_velocities_2d
 from lib.transforms.transforms import StandardizeMotionVectors, StandardizeVelocities
 
 
@@ -155,7 +155,10 @@ class MotionVectorTracker:
 
             # make sure output is on CPU
             velocities_pred = velocities_pred.cpu()
-            velocities_pred = velocities_pred.view(1, -1, 4)
+            if self.mvs_mode == "upsampled":
+                velocities_pred = velocities_pred.view(1, -1, 4)
+            elif self.mvs_mode == "dense":
+                velocities_pred = velocities_pred.view(1, -1, 2)
             velocities_pred = velocities_pred[0, ...]
 
             # undo the standardization of predicted velocities
@@ -165,7 +168,10 @@ class MotionVectorTracker:
         # compute boxes from predicted velocities
         boxes_prev = boxes_prev[0, ...]
         boxes_prev = boxes_prev[..., 1:5]
-        self.boxes = box_from_velocities(boxes_prev, velocities_pred).numpy()
+        if self.mvs_mode == "upsampled":
+            self.boxes = box_from_velocities(boxes_prev, velocities_pred).numpy()
+        elif self.mvs_mode == "dense":
+            self.boxes = box_from_velocities_2d(boxes_prev, velocities_pred).numpy()
 
 
     def get_boxes(self):

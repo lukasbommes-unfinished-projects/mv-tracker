@@ -32,11 +32,11 @@ class RunningStats():
 # run as python -m lib.dataset.tools.compute_stats from root dir
 if __name__ == "__main__":
     visu = False  # whether to show graphical output (frame + motion vectors) or not
-    codec = "h264"
-    mvs_mode = "upsampled"
+    codec = "mpeg4"
+    mvs_mode = "dense"
     static_only = False
     exclude_keyframes = True
-    scales = [1.0]#, 0.75, 0.5]
+    scales = [1.0]
 
     dataset_train = MotionVectorDataset(root_dir='data', transforms=None, codec=codec,
         scales=scales, mvs_mode=mvs_mode, static_only=static_only,
@@ -57,8 +57,9 @@ if __name__ == "__main__":
 
     runnings_stats_vel_xc = RunningStats()
     runnings_stats_vel_yc = RunningStats()
-    runnings_stats_vel_w = RunningStats()
-    runnings_stats_vel_h = RunningStats()
+    if mvs_mode == "upsampled":
+        runnings_stats_vel_w = RunningStats()
+        runnings_stats_vel_h = RunningStats()
 
     for step, sample in enumerate(dataloader_train):
 
@@ -67,11 +68,12 @@ if __name__ == "__main__":
         runnings_stats_mvs_y.update(np.mean(motion_vectors[1, :, :]))
 
         velocities = sample["velocities"][0].numpy()
-        for v_xc, v_yc, v_w, v_h in velocities:
-            runnings_stats_vel_xc.update(v_xc)
-            runnings_stats_vel_yc.update(v_yc)
-            runnings_stats_vel_w.update(v_w)
-            runnings_stats_vel_h.update(v_h)
+        for v in velocities:
+            runnings_stats_vel_xc.update(v[0])
+            runnings_stats_vel_yc.update(v[1])
+            if mvs_mode == "upsampled":
+                runnings_stats_vel_w.update(v[2])
+                runnings_stats_vel_h.update(v[3])
 
         if visu:
             motion_vectors = torch.from_numpy(motion_vectors)
@@ -107,5 +109,6 @@ if __name__ == "__main__":
 
     print("vel xc -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_xc.get_stats()))
     print("vel yc -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_yc.get_stats()))
-    print("vel w -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_w.get_stats()))
-    print("vel h -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_h.get_stats()))
+    if mvs_mode == "upsampled":
+        print("vel w -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_w.get_stats()))
+        print("vel h -- mean: {}, variance: {}, std: {}".format(*runnings_stats_vel_h.get_stats()))

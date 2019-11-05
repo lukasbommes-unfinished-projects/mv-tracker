@@ -1,0 +1,28 @@
+###############################################
+# Best models so far are:
+#  -- Dense, MPEG4, Single Scale, Full dataset, only P vectors
+#  -- Dense, MPEG4, Single Scale, Static cameras, only P vectors
+#  -- Dense, H264, Single Scale, Static cameras, only P vectors
+#  -- Dense, H264, Single Scale, Full dataset, only P vectors
+#
+###############################################
+
+2019-11-05_05-07-14 As 2019-11-05_04-26-02, but with fixed_blocks=2 instead of fixed_blocks=4, that is the last layer of the base network is trainable.
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance [...]
+
+2019-11-05_04-54-19 As 2019-11-05_04-26-02, but with fixed_blocks=3 instead of fixed_blocks=4, that is the last layer of the base network is trainable.
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance [...]
+
+2019-11-05_04-26-52 As 2019-11-05_04-26-02, but with different lr schedule
+trained via cmd: python train_new.py --static_only --num_epochs=80 --scheduler_frequency=20 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance [...]
+
+2019-11-05_04-26-02 As 2019-11-05_04-10-43, but with lower learning rate of 1e-5 instead of 1e-4
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5
+-> test performance [...]
+
+2019-11-05_04-10-43 Initial test of new model with 2D velocities and completely fixed base network
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005
+-> test performance [...]

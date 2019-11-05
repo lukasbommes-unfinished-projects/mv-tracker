@@ -75,25 +75,25 @@ class StatsH264UpsampledFullSinglescale():
 
 
 # mpeg4 dense, no keyframes, training data, only static cameras
-# codec = mpeg4, mvs_mode = dense, static_only = True, exclude_keyframes = True, scales = [1.0, 0.75, 0.5]
-class StatsMpeg4DenseStaticMultiscale():
-    velocities = {
-        "mean": [0.003505179233179393, 0.00018602562223680547, 0.00024045374204044416, 8.181187497684377e-05],
-        "std": [0.09751977367068247, 0.012586229218958307, 0.019328811763204536, 0.00421376344570489]
-    }
-    motion_vectors = {
-        "mean": [0.0, 0.013189169794109501, 0.05825615665845193],
-        "std": [1.0, 0.06031575367251622, 0.374547766431143]
-    }
-
-# mpeg4 dense, no keyframes, training data, only static cameras
 # codec = mpeg4, mvs_mode = dense, static_only = True, exclude_keyframes = True, scales = [1.0]
 class StatsMpeg4DenseStaticSinglescale():
     velocities = {
-        "mean": [0.003505179250665827, 0.00018602565541264086, 0.0002404537348835983, 8.181186571028626e-05],
-        "std": [0.09751977443928779, 0.012586229216352347, 0.0193288116599051, 0.0042137634660418125]
+        "mean": [0.0016523574430460121, 8.769333919036941e-05],
+        "std": [0.045971264593160685, 0.005933205636581293]
     }
     motion_vectors = {
         "mean": [0.0, 0.016107642943830696, 0.07541612903921065],
         "std": [1.0, 0.06298750897933865, 0.42173798690940506]
+    }
+
+# mpeg4 dense, no keyframes, training data, only static cameras
+# codec = mpeg4, mvs_mode = dense, static_only = False, exclude_keyframes = True, scales = [1.0]
+class StatsMpeg4DenseFullSinglescale():
+    velocities = {
+        "mean": [-0.008838819279986882, 0.0012495100149675096],
+        "std": [0.10043215075885126, 0.017104508898420422]
+    }
+    motion_vectors = {
+        "mean": [0.0, 0.15313816193039162, -0.17677343284746544],
+        "std": [1.0, 0.9635213638095246, 2.935473353982918]
     }
