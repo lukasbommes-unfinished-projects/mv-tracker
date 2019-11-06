@@ -7,9 +7,17 @@
 #
 ###############################################
 
+2019-11-06_05-18-47 As 2019-11-06_05-14-17, but conv and conv1x1 layer have less channels, so that that number of trainable params is 170k (total 320k)
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance: [...]
+
+2019-11-06_05-14-17 As 2019-11-05_04-26-02, but removed base layers 2, 3, 4 of pnet_dense, so that number of trainable params is 340k (total 500k)
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
 2019-11-06_04-37-14 Same model as 2019-11-06_03-59-17, but changed lr schedule to decrease lr once in local maximum at step 12
 trained via cmd: python train_new.py --static_only --num_epochs=48 --scheduler_frequency=12 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
--> test performance: [...]
+-> aborted training, because it did not look promising, loss and mean IoU followed those of 2019-11-06_03-59-17 closely
 
 2019-11-06_04-04-14 As 2019-11-06_03-59-17, but changed conv1x1 channel number, so that number of trainable params is 320k (1M total)
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
