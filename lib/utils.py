@@ -24,9 +24,12 @@ def count_params(model):
     """Return the number of parameters in the model."""
     params = list(model.parameters())
     count = 0
+    count_trainable = 0
     for p in params:
         count += p.flatten().shape[0]
-    return count
+        if p.requires_grad:
+            count_trainable += p.flatten().shape[0]
+    return count, count_trainable
 
 
 def weight_checksum(model):

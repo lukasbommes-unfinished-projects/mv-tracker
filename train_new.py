@@ -18,10 +18,6 @@ from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.dataset.dataset_new import MotionVectorDataset
 from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale as Stats
-#from lib.dataset.stats import StatsMpeg4UpsampledStaticSinglescale as Stats
-#from lib.dataset.stats import StatsMpeg4UpsampledFullSinglescale as Stats
-#from lib.dataset.stats import StatsH264UpsampledStaticSinglescale as Stats
-#from lib.dataset.stats import StatsH264UpsampledFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -341,7 +337,7 @@ if __name__ == "__main__":
 
     logger.info(f"model: {model}")
     logger.info(f"model requires_grad: {[p.requires_grad for p in model.parameters()]}")
-    logger.info(f"model param count: {count_params(model)}")
+    logger.info("model param count: {} (of which trainable: {})".format(*count_params(model)))
 
     logger.info(f"optimizer: {optimizer}")
     logger.info(f"transforms: {transforms['train']}")

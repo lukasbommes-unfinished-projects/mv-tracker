@@ -7,22 +7,89 @@
 #
 ###############################################
 
+2019-11-06_04-37-14 Same model as 2019-11-06_03-59-17, but changed lr schedule to decrease lr once in local maximum at step 12
+trained via cmd: python train_new.py --static_only --num_epochs=48 --scheduler_frequency=12 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
+2019-11-06_04-04-14 As 2019-11-06_03-59-17, but changed conv1x1 channel number, so that number of trainable params is 320k (1M total)
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance: [...]
+
+2019-11-06_03-59-17 As 2019-11-06_03-50-35, but with only one additional conv layer, so that number of trainable params is 640k (1.3M total)
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
+2019-11-06_03-50-35 As 2019-11-05_04-26-02, but removed base layers 3 and 4 of pnet_dense, and added two conv layers, so that number of trainable params is 1.5M (2.2M total)
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance: [...]
+
+2019-11-06_03-12-09 As 2019-11-06_03-05-16, but added more channels to new conv layer and conv1x1 so that number of trainable params is 1.2M
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance: [...]
+
+2019-11-06_03-05-16 As 2019-11-05_04-26-02, but removed base layer 4 of pnet_dense, changed conv1x1 to 256 channels and added additional conv layer, so that number of trainable params increases from 51k (as in 2019-11-05_04-26-02) to 616k
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
+####
+
+2019-11-05_17-30-53 Same as 2019-11-05_17-27-59, but with two additional conv layers instead of one additional conv layer
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> Overfitting is even stronger than in 2019-11-05_17-27-59
+-> test performance: (model_final) even worse than 2019-11-05_17-27-59
+
+2019-11-05_17-27-59 Same as 2019-11-05_04-26-02, but added one additional conv layer into pnet_dense model to increase model capacity
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> Loss and mean IoU curve indicate that overfitting happened similar to 2019-11-05_04-54-19 where some base layers are trainable
+-> test performance: (model_final) not as good as model without the additional layer
+
+2019-11-05_17-09-31 Same as 2019-11-05_04-26-02, but trained on full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> Loss and mean IoU indicate that the model did not learn anything correctly (val loss increases right in the beginning)
+-> test performance: all three models have insufficient performance
+
+2019-11-05_17-12-28 Same as 2019-11-05_04-26-02, but with random motion augmentation deactivated
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> Validation loss is higher than with additional augmentation and mean IoU is lower (indicates more overfitting)
+-> test performance:
+    - model_final: okay
+    - model_lowest_loss: not as good as model_final and model_highest_iou
+    - model_highest_iou: better than model_final
+
+####
+
+best performing mocel in this block is: 2019-11-05_04-26-02
+
 2019-11-05_05-07-14 As 2019-11-05_04-26-02, but with fixed_blocks=2 instead of fixed_blocks=4, that is the last layer of the base network is trainable.
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance [...]
+-> test performance:
+    - model_final: not very good
+    - model_lowest_loss: worse than model_highest_iou
+    - model_highest_iou: okay, similar to 2019-11-05_04-26-02
 
 2019-11-05_04-54-19 As 2019-11-05_04-26-02, but with fixed_blocks=3 instead of fixed_blocks=4, that is the last layer of the base network is trainable.
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
--> test performance [...]
+-> test performance:
+    - model_final: very bad
+    - model_lowest_loss: better than model_final, but still not good
+    - model_highest_iou: very bad
 
 2019-11-05_04-26-52 As 2019-11-05_04-26-02, but with different lr schedule
 trained via cmd: python train_new.py --static_only --num_epochs=80 --scheduler_frequency=20 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
--> test performance [...]
+-> test performance:
+    - model_final: slightly worse than 2019-11-05_04-26-02
+    - model_lowest_loss: similar to model_final
+    - model_highest_iou: [...]
 
 2019-11-05_04-26-02 As 2019-11-05_04-10-43, but with lower learning rate of 1e-5 instead of 1e-4
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5
--> test performance [...]
+-> test performance:
+    - model_final: okay, not all targets are tracked properly, some targets are tracked sufficiently
+    - model_lowest_loss: looks a little worse than model_final
+    - model_highest_iou: very similar to model_final
 
 2019-11-05_04-10-43 Initial test of new model with 2D velocities and completely fixed base network
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005
--> test performance [...]
+- model_final: worse than 2019-11-05_04-26-02
+- model_lowest_loss: [...]
+- model_highest_iou: [...]

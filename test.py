@@ -15,24 +15,23 @@ from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
 from lib.dataset.stats import StatsMpeg4UpsampledStatic, \
     StatsMpeg4UpsampledFull, StatsMpeg4DenseStaticSinglescale, \
-    StatsMpeg4DenseStaticMultiscale, StatsMpeg4UpsampledStaticSinglescale, \
+    StatsMpeg4DenseFullSinglescale, StatsMpeg4UpsampledStaticSinglescale, \
     StatsMpeg4UpsampledFullSinglescale, StatsH264UpsampledStaticSinglescale,\
     StatsH264UpsampledFullSinglescale
 
 
 if __name__ == "__main__":
 
-    scaling_factor = 0.5
+    scaling_factor = 1.0
     codec = "mpeg4"
 
     # reminder: when evaluating h264 models, use h264 videos
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, static cam
-    #video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, static cam
+    #video_file = "data/MOT17/train/MOT17-11-FRCNN/MOT17-11-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, moving cam
+    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, static cam
     #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, moving cam
     #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, moving cam
-
-    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, static cam
 
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
@@ -48,20 +47,20 @@ if __name__ == "__main__":
     #     codec="mpeg4",
     #     stats=StatsMpeg4UpsampledFull,
     #     device=torch.device("cuda:0"))
-    tracker_deep = MotionVectorTrackerDeep(
-        iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-10-23_09-25-34/model_final.pth", #2019-10-30_02-47-42/model_highest_iou.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
-        mvs_mode="upsampled",
-        codec="mpeg4",
-        stats=StatsMpeg4UpsampledFullSinglescale, #StatsMpeg4UpsampledStaticSinglescale,
-        device=torch.device("cuda:0"))
     # tracker_deep = MotionVectorTrackerDeep(
     #     iou_threshold=tracker_iou_thres,
-    #     weights_file="models/tracker/2019-10-30_02-37-39/model_final.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
-    #     mvs_mode="dense",
+    #     weights_file="models/tracker/2019-10-23_09-25-34/model_final.pth", #2019-10-30_02-47-42/model_highest_iou.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
+    #     mvs_mode="upsampled",
     #     codec="mpeg4",
-    #     stats=StatsMpeg4DenseStaticSinglescale,
+    #     stats=StatsMpeg4UpsampledFullSinglescale, #StatsMpeg4UpsampledStaticSinglescale,
     #     device=torch.device("cuda:0"))
+    tracker_deep = MotionVectorTrackerDeep(
+        iou_threshold=tracker_iou_thres,
+        weights_file="models/tracker/2019-11-05_17-30-53/model_final.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
+        mvs_mode="dense",
+        codec="mpeg4",
+        stats=StatsMpeg4DenseStaticSinglescale,
+        device=torch.device("cuda:0"))
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
