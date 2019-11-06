@@ -7,13 +7,51 @@
 #
 ###############################################
 
+2019-11-06_08-41-00 As 2019-11-06_06-15-39, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
+2019-11-06_08-40-17 As 2019-11-06_05-18-47, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance: [...]
+
+2019-11-06_08-39-35 As 2019-11-06_05-14-17, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
+2019-11-06_08-38-45 As 2019-11-06_04-04-14, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance: [...]
+
+2019-11-06_08-36-46 As 2019-11-06_03-59-17, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
+####
+
+This block yielded several well performing models:
+1) 2019-11-06_04-04-14, very accurate, small number of parameters (1M)
+2) 2019-11-06_03-59-17, very accurate, but also most parameters (1.3M)
+3) 2019-11-06_05-18-47, 2019-11-06_05-14-17 (much smaller models which also work quite okay, even though not as accurate as the first two)
+
+
+2019-11-06_06-15-39 As 2019-11-06_04-04-14, but reduced conv1x1 channel number even more, so that number of trainable params is 160k (830k total)
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance: [...]
+
 2019-11-06_05-18-47 As 2019-11-06_05-14-17, but conv and conv1x1 layer have less channels, so that that number of trainable params is 170k (total 320k)
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance: [...]
+-> test performance:
+    - model_final: not good
+    - model_lowest_loss: quite good
+    - model_highest_iou: quite good
 
 2019-11-06_05-14-17 As 2019-11-05_04-26-02, but removed base layers 2, 3, 4 of pnet_dense, so that number of trainable params is 340k (total 500k)
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
--> test performance: [...]
+-> test performance:
+    - model_final: quite good also
+    - model_lowest_loss: better than model_highest_iou, but slightly less than 2019-11-06_03-59-17
+    - model_highest_iou: much worse than 2019-11-06_03-59-17
 
 2019-11-06_04-37-14 Same model as 2019-11-06_03-59-17, but changed lr schedule to decrease lr once in local maximum at step 12
 trained via cmd: python train_new.py --static_only --num_epochs=48 --scheduler_frequency=12 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
@@ -21,23 +59,32 @@ trained via cmd: python train_new.py --static_only --num_epochs=48 --scheduler_f
 
 2019-11-06_04-04-14 As 2019-11-06_03-59-17, but changed conv1x1 channel number, so that number of trainable params is 320k (1M total)
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance: [...]
+-> test performance:
+    - model_final: has a weird yiggling effect of boxes (overfitting?), not as good
+    - model_lowest_loss: works well
+    - model_highest_iou: not as good as model_lowest_loss (looks a bit like overfitting)
 
 2019-11-06_03-59-17 As 2019-11-06_03-50-35, but with only one additional conv layer, so that number of trainable params is 640k (1.3M total)
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
--> test performance: [...]
+-> test performance:
+    - model_final: not so good
+    - model_lowest_loss: on par or even better than model_highest_iou
+    - model_highest_iou: best model so far
 
 2019-11-06_03-50-35 As 2019-11-05_04-26-02, but removed base layers 3 and 4 of pnet_dense, and added two conv layers, so that number of trainable params is 1.5M (2.2M total)
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance: [...]
+-> test performance:
+    - model_final: not good
+    - model_lowest_loss: better than model_final, but still not as good as other models
+    - model_highest_iou: quite okay
 
 2019-11-06_03-12-09 As 2019-11-06_03-05-16, but added more channels to new conv layer and conv1x1 so that number of trainable params is 1.2M
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance: [...]
+-> test performance: similar performance to 2019-11-06_03-05-16
 
 2019-11-06_03-05-16 As 2019-11-05_04-26-02, but removed base layer 4 of pnet_dense, changed conv1x1 to 256 channels and added additional conv layer, so that number of trainable params increases from 51k (as in 2019-11-05_04-26-02) to 616k
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
--> test performance: [...]
+-> test performance: (model_highest_iou) better than 2019-11-05_04-26-02, but worse than 2019-11-06_03-59-17
 
 ####
 
@@ -66,7 +113,7 @@ trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_
 
 ####
 
-best performing mocel in this block is: 2019-11-05_04-26-02
+best performing model in this block is: 2019-11-05_04-26-02
 
 2019-11-05_05-07-14 As 2019-11-05_04-26-02, but with fixed_blocks=2 instead of fixed_blocks=4, that is the last layer of the base network is trainable.
 trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0

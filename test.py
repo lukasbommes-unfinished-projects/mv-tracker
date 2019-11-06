@@ -56,7 +56,7 @@ if __name__ == "__main__":
     #     device=torch.device("cuda:0"))
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-11-05_17-30-53/model_final.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
+        weights_file="models/tracker/2019-11-06_05-18-47/model_highest_iou.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
         mvs_mode="dense",
         codec="mpeg4",
         stats=StatsMpeg4DenseStaticSinglescale,
