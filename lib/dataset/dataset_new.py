@@ -14,7 +14,7 @@ from lib.dataset.velocities import velocities_from_boxes, velocities_from_boxes_
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
 
 # for testing
-from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale as Stats
+from lib.dataset.stats import StatsMpeg4DenseFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 
@@ -343,7 +343,7 @@ if __name__ == "__main__":
     batch_size = 1
     codec = "mpeg4"
     mvs_mode = "dense"
-    static_only = True
+    static_only = False
     exclude_keyframes = True
     scales = [1.0]
 

@@ -13,12 +13,12 @@ __pycache__/
 /eval_output/
 /data_precomputed*/
 
-/overfit_test/runs/
-/overfit_test/data/
-/overfit_test/data_10_samples/
-/overfit_test/data_whole_video/
+/old/overfit_test/runs/
+/old/overfit_test/data/
+/old/overfit_test/data_10_samples/
+/old/overfit_test/data_whole_video/
 
-/overfit_dense_model/
+/old/overfit_dense_model/
 
 /data/MOT17/
 /data/MOT15/

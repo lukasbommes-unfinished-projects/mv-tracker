@@ -7,13 +7,165 @@
 #
 ###############################################
 
+
+[improve medium sized model with 5M parameters from 2019-11-07_05-11-05]
+
+
+2019-11-08_08-09-19 Using model 2019-11-06_05-18-47
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-5 --gpu=0
+-> test performance:
+
+2019-11-08_08-08-27 Using model 2019-11-06_05-18-47
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1
+-> test performance:
+
+####
+
+The best performing model in this block:
+1) 2019-11-08_04-15-42: Works well, mostly on static scenes though. Higher accuracy than 2019-11-07_04-11-02, does not shift boxes up as compared to all other models in this block.
+
+2019-11-08_04-19-47 Using modified version of model 2019-11-06_04-04-14 with additional fixed layers (middle conv4, bn4 and conv1x1 layers are trainable)
+python train_new.py --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=0 --intial_weights_file=models/tracker/2019-11-06_04-04-14/model_lowest_loss.pth
+-> test performance: (model_highest_iou) global upward movement
+
+2019-11-08_04-18-22 Using modified version of model 2019-11-06_04-04-14 with additional fixed layers (only the middle conv4, bn4 layers are trainable)
+python train_new.py --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1 --intial_weights_file=models/tracker/2019-11-06_04-04-14/model_lowest_loss.pth
+-> test performance: (model_highest_iou) strong global upward movement
+
+2019-11-08_04-15-42 Using modified version of model 2019-11-06_04-04-14 with additional fixed layers (only the conv1x1 layer is trainable)
+python train_new.py --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1 --intial_weights_file=models/tracker/2019-11-06_04-04-14/model_lowest_loss.pth
+-> test performance:
+    - model_highest_iou_epoch31: performs very well, better than 2019-11-07_04-11-02
+    - model_lowest_loss_epoch77: performs very well, very similar to model_highest_iou_epoch31
+
+2019-11-08_04-11-56 Using modified version of model 2019-11-06_04-04-14 with additional fixed layers (only the first conv layer is trainable)
+python train_new.py --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=0 --intial_weights_file=models/tracker/2019-11-06_04-04-14/model_lowest_loss.pth
+-> test performance: (model_highest_iou) strong global upward movement
+
+2019-11-08_02-31-06 Using model 2019-11-06_04-04-14
+python train_new.py --num_epochs=20 --batch_size=2 --scheduler_frequency=10 --weight_decay=0.001 --learning_rate=1e-6 --gpu=0 --intial_weights_file=models/tracker/2019-11-06_04-04-14/model_lowest_loss.pth
+-> test performance: (model_highest_iou) strong global upward movement, like 2019-11-08_02-22-43
+
+2019-11-08_02-22-43 Using model 2019-11-06_04-04-14
+python train_new.py --num_epochs=20 --batch_size=2 --scheduler_frequency=10 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1 --intial_weights_file=models/tracker/2019-11-06_04-04-14/model_lowest_loss.pth
+-> test performance: (model_highest_iou) less accurate than 2019-11-08_02-21-24, (model_final) bad
+
+2019-11-08_02-21-24 Using model 2019-11-06_04-04-14
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=80 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1 --intial_weights_file=models/tracker/2019-11-06_04-04-14/model_lowest_loss.pth
+-> test performance: (model_highest_iou) better than previous two models, but still have slight global qupward movement
+
+2019-11-08_02-17-48 Using model 2019-11-06_04-04-14
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.005 --learning_rate=1e-5 --gpu=0
+-> test performance: (model_highest_iou) not good, boxes have global upward motion
+
+2019-11-08_02-17-18 Using model 2019-11-06_04-04-14
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.005 --learning_rate=1e-4 --gpu=0
+-> test performance: (model_highest_iou) not good, boxes have global upward motion
+
+####
+
+The best performing models in this block:
+1) 2019-11-07_05-11-05: Higher accuracy than 2019-11-07_04-11-02, but also a lot more parameters
+2) 2019-11-07_04-11-02: Okay, even though the model always shifts up boxes, but model has a lot less parameters
+
+2019-11-07_05-23-40 Same as 2019-11-07_05-11-05, but with higher learning rate
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.01 --learning_rate=1e-4 --gpu=1
+-> test performance:
+    - model_final: not as good as 2019-11-07_05-11-05
+    - model_lowest_loss: not good
+    - model_highest_iou: similar to 2019-11-07_05-11-05
+
+2019-11-07_05-11-05 New model with much more trainable weights 4.6M (total 5.3M)
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.01 --learning_rate=1e-5 --gpu=0
+-> test performance:
+    - model_final: okay
+    - model_lowest_loss: bad (too early in training)
+    - model_highest_iou: not as good as model final
+
+2019-11-07_04-24-47 Same as 2019-11-07_04-14-17, but with different lr schedule
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.01 --learning_rate=1e-5 --gpu=0
+-> test performance:
+    - model_final: very bad
+    - model_lowest_loss: same model as model_highest_iou
+    - model_highest_iou: not too bad, but worse than 2019-11-07_04-11-02
+
+2019-11-07_04-14-17 Same as Nov07_02-26-34_295b671b36a0, but activated model saving
+python train_new.py --num_epochs=120 --batch_size=2 --scheduler_frequency=10 --weight_decay=0.01 --learning_rate=1e-5 --gpu=1
+-> test performance:
+    - model_final: very bad, overfitted
+    - model_lowest_loss: not good either, boxes move with global motion to the left
+    - model_highest_iou: not good, boxes move with global motion to top
+
+2019-11-07_04-11-02 Uses model 2019-11-06_04-04-14
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=80 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1
+-> test performance:
+    - model_final: very bad
+    - model_lowest_loss: slightly worse than model_highest_iou, but still okay
+    - model_highest_iou: okay, epoch 31 model, little overfitting to train data
+
+2019-11-07_04-10-54 Uses model 2019-11-06_04-04-14
+python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-5 --gpu=0
+-> aborted because train loss started increasing (weight decay seems too high) and model capacity seems too low
+
+
+Nov07_03-36-53_295b671b36a0 New model without Resnet base and just two conv layers with 44k trainable params
+python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> aborted as val loss increases
+
+Nov07_03-07-33_295b671b36a0 New model for pnet 2.1M trainable params (2.8M total)
+python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> aborted because shows same overfitting effect as all models, even stronger
+
+Nov07_03-02-00_295b671b36a0 Uses model 2019-11-06_03-50-35
+python train_new.py --batch_size=128 --num_epochs=120 --scheduler_frequency=40 --weight_decay=0.001 --learning_rate=1e-6 --gpu=0
+-> aborted because it does not learn anything because lr is too low
+
+Nov07_02-26-34_295b671b36a0 Uses model 2019-11-06_03-50-35
+python train_new.py --num_epochs=120 --batch_size=2 --scheduler_frequency=10 --weight_decay=0.01 --learning_rate=1e-5 --gpu=1
+-> looks promising, thus restarted as 2019-11-07_04-14-17
+
+Nov07_02-23-25_295b671b36a0 Uses model 2019-11-06_03-50-35
+python train_new.py --num_epochs=120 --batch_size=128 --scheduler_frequency=10 --weight_decay=0.001 --learning_rate=1e-5 --gpu=0
+-> aborted because the losses and IoU curves are very noisy
+
+Nov07_02-03-03_295b671b36a0 Uses model 2019-11-06_03-50-35
+python train_new.py --num_epochs=120 --batch_size=2 --scheduler_frequency=10 --weight_decay=0.001 --learning_rate=1e-5 --gpu=0
+-> aborted because val loss increases
+
+Nov07_02-00-31_295b671b36a0 Uses model 2019-11-06_03-50-35
+python train_new.py --num_epochs=120 --batch_size=2 --scheduler_frequency=10 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> aborted because val loss increases
+
+####
+
+None of the models in this block trained properly. All of them show strong overfitting right from beginning of
+training (val loss increases, val IoU decreases).
+
+2019-11-06_15-03-40 As 2019-11-06_03-50-35, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
+-> test performance:
+    - model_final: very bad
+    - model_lowest_loss:
+    - model_highest_iou:
+
+2019-11-06_15-02-38 As 2019-11-06_03-12-09, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> train loss increases, does not work
+
+2019-11-06_15-00-51 As 2019-11-06_03-05-16, but full dataset
+trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> train loss increases, does not work
+
 2019-11-06_08-41-00 As 2019-11-06_06-15-39, but full dataset
 trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1
 -> test performance: [...]
 
 2019-11-06_08-40-17 As 2019-11-06_05-18-47, but full dataset
 trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance: [...]
+-> test performance:
+    - model_final: very bad, boxes move with global motion in static scenes
+    - model_lowest_loss: bad, boxes move with global motion in static scenes
+    - model_highest_iou: bad in static scenes, medium good in moving scenes, but still learned wrong global motion
 
 2019-11-06_08-39-35 As 2019-11-06_05-14-17, but full dataset
 trained via cmd: python train_new.py --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1

@@ -17,12 +17,13 @@ import torchvision
 from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsMpeg4DenseFullSinglescale as Stats
+from lib.dataset.stats import StatsH264DenseStaticSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
 from lib.dataset.velocities import box_from_velocities, box_from_velocities_2d
-from lib.utils import compute_mean_iou, weight_checksum, count_params
+from lib.utils import compute_mean_iou, weight_checksum, count_params, \
+    load_pretrained_weights
 
 
 torch.set_printoptions(precision=10)
@@ -248,6 +249,8 @@ def parse_args():
     parser.add_argument('--scheduler_frequency', type=int, default=20)
     parser.add_argument('--scheduler_factor', type=float, default=0.1)
     parser.add_argument('--gpu', type=int, default=0)
+    # transfer learning
+    parser.add_argument('--intial_weights_file', type=str, default="")
     return parser.parse_args()
 
 
@@ -329,6 +332,9 @@ if __name__ == "__main__":
     elif args.mvs_mode =="dense":
         model = PropagationNetworkDense()
 
+    if args.intial_weights_file:
+        model = load_pretrained_weights(model, args.intial_weights_file)
+        logger.info(f"Using initial weights from: {args.intial_weights_file}")
     model = model.to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.999),

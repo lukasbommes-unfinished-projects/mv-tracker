@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import torch
 from torch.nn.parameter import Parameter
 import torchvision
@@ -18,6 +20,20 @@ def load_pretrained_weights_to_modified_resnet(cnn_model, pretrained_weights):
             val = val.data
         pre_dict[key].copy_(val)
     cnn_model.load_state_dict(pre_dict)
+
+
+def load_pretrained_weights(model, weights_file):
+    state_dict = torch.load(weights_file)
+    # if model was trained with nn.DataParallel we need to alter the state dict
+    if "module" in list(state_dict.keys())[0]:
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k[7:]  # remove 'module.'
+            new_state_dict[name] = v
+        model.load_state_dict(new_state_dict)
+    else:
+        model.load_state_dict(state_dict)
+    return model
 
 
 def count_params(model):

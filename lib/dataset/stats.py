@@ -97,3 +97,15 @@ class StatsMpeg4DenseFullSinglescale():
         "mean": [0.0, 0.15313816193039162, -0.17677343284746544],
         "std": [1.0, 0.9635213638095246, 2.935473353982918]
     }
+
+# h264 dense, no keyframes, training data, only static cameras
+# codec = h264, mvs_mode = dense, static_only = True, exclude_keyframes = True, scales = [1.0]
+class StatsH264DenseStaticSinglescale():
+    velocities = {
+        "mean": [0.0016827660191074628, 9.810878965733302e-05],
+        "std": [0.04588518077849422, 0.005918017898705134]
+    }
+    motion_vectors = {
+        "mean": [0.0, 0.02094569523211732, 0.02612519229745142],
+        "std": [1.0, 0.171721860009504, 1.5414872371070174]
+    }

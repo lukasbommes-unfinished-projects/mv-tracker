@@ -19,6 +19,7 @@ from lib.dataset.motion_vectors import get_vectors_by_source, get_nonzero_vector
     motion_vectors_to_grid_interpolated
 from lib.dataset.velocities import box_from_velocities, box_from_velocities_2d
 from lib.transforms.transforms import StandardizeMotionVectors, StandardizeVelocities
+from lib.utils import load_pretrained_weights
 
 
 class MotionVectorTracker:
@@ -49,16 +50,8 @@ class MotionVectorTracker:
         elif self.mvs_mode == "dense":
             self.model = PropagationNetworkDense()
         self.model = self.model.to(self.device)
-        state_dict = torch.load(weights_file)
-        # if model was trained with nn.DataParallel we need to alter the state dict
-        if "module" in list(state_dict.keys())[0]:
-            new_state_dict = OrderedDict()
-            for k, v in state_dict.items():
-                name = k[7:]  # remove 'module.'
-                new_state_dict[name] = v
-            self.model.load_state_dict(new_state_dict)
-        else:
-            self.model.load_state_dict(state_dict)
+
+        self.model = load_pretrained_weights(self.model, weights_file)
         self.model.eval()
 
 
