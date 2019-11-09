@@ -34,7 +34,7 @@ if __name__ == "__main__":
     visu = False  # whether to show graphical output (frame + motion vectors) or not
     codec = "h264"
     mvs_mode = "dense"
-    static_only = True
+    static_only = False
     exclude_keyframes = True
     scales = [1.0]
 

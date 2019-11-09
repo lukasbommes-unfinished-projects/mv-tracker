@@ -1,9 +1,9 @@
 ###############################################
 # Best models so far are:
-#  -- Dense, MPEG4, Single Scale, Full dataset, only P vectors
-#  -- Dense, MPEG4, Single Scale, Static cameras, only P vectors
-#  -- Dense, H264, Single Scale, Static cameras, only P vectors
-#  -- Dense, H264, Single Scale, Full dataset, only P vectors
+# 2019-11-08_04-15-42 -- Dense, MPEG4, Single Scale, Full dataset, only P vectors
+# 2019-11-06_04-04-14 -- Dense, MPEG4, Single Scale, Static cameras, only P vectors
+# 2019-11-08_18-01-19 -- Dense, H264, Single Scale, Full dataset, only P vectors
+# 2019-11-08_09-25-01 -- Dense, H264, Single Scale, Static cameras, only P vectors
 #
 ###############################################
 
@@ -13,11 +13,11 @@
 
 2019-11-08_08-09-19 Using model 2019-11-06_05-18-47
 python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-5 --gpu=0
--> test performance:
+-> aborted because train loss increased
 
 2019-11-08_08-08-27 Using model 2019-11-06_05-18-47
 python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1
--> test performance:
+-> test performance: shows global upward movement on static camera shots, but okay on moving camera
 
 ####
 

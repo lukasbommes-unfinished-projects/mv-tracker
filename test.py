@@ -17,19 +17,20 @@ from lib.dataset.stats import StatsMpeg4UpsampledStatic, \
     StatsMpeg4UpsampledFull, StatsMpeg4DenseStaticSinglescale, \
     StatsMpeg4DenseFullSinglescale, StatsMpeg4UpsampledStaticSinglescale, \
     StatsMpeg4UpsampledFullSinglescale, StatsH264UpsampledStaticSinglescale,\
-    StatsH264UpsampledFullSinglescale
+    StatsH264UpsampledFullSinglescale, StatsH264DenseStaticSinglescale, \
+    StatsH264DenseFullSinglescale
 
 
 if __name__ == "__main__":
 
     scaling_factor = 1.0
-    codec = "mpeg4"
+    codec = "h264"
 
     # reminder: when evaluating h264 models, use h264 videos
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, static cam
-    #video_file = "data/MOT17/train/MOT17-11-FRCNN/MOT17-11-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, moving cam
+    video_file = "data/MOT17/train/MOT17-11-FRCNN/MOT17-11-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, moving cam
     #video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, static cam
-    video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, moving cam
+    #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, moving cam
     #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, moving cam
 
@@ -56,10 +57,10 @@ if __name__ == "__main__":
     #     device=torch.device("cuda:0"))
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-11-07_05-11-05/model_final.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
+        weights_file="models/tracker/2019-11-08_18-01-19/model_highest_iou.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
         mvs_mode="dense",
         codec=codec,
-        stats=StatsMpeg4DenseFullSinglescale,
+        stats=StatsH264DenseFullSinglescale,
         device=torch.device("cuda:0"))
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)

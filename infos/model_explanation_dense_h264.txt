@@ -1,3 +1,7 @@
-2019-11-08_09-25-01 Uses 2019-11-06_04-04-14
+2019-11-08_18-01-19 Uses model 2019-11-08_04-15-42
+trained via cmd: python train_new.py --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1 --intial_weights_file=models/tracker/2019-11-08_09-25-01/model_highest_iou.pth
+-> test performance: (model_highest_iou same as model_lowest_loss) very good on static scenes,not so good on moving camera scenes
+
+2019-11-08_09-25-01 Uses model 2019-11-06_04-04-14
 trained via cmd: python train_new.py --static_only --codec=h264 --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance:
+-> test performance: medium, some boxes do not move, others are okay. Probably due to noisy nature of H.264 motion vectors.

@@ -14,7 +14,9 @@ from lib.dataset.loaders import load_detections
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
-from lib.dataset.stats import StatsMpeg4UpsampledFull
+from lib.dataset.stats import StatsMpeg4UpsampledFullSinglescale, \
+    StatsH264UpsampledFullSinglescale, StatsMpeg4DenseFullSinglescale,
+    StatsH264DenseFullSinglescale
 
 
 def parse_args():
@@ -51,6 +53,7 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
     parser.add_argument('--sequences', nargs='+', type=str, help='Compute boxes on the specified sequences only. If provided settings for benchmark and mode are ignored.')
     parser.add_argument('--scale', type=float, help='Scaling factor for the input sequence relative to the original sequence, e.g. if original sequence is 1920 x 1080, but was reencoded to 960 x 540 then scale is 0.5.', default=1.0)
     parser.add_argument('--codec', type=str, help='Either "mpeg4" or "h264" determines the encoding type of the video.', default='mpeg4')
+    parser.add_argument('--mvs_mode', type=str, help='Either "upsampled" or "dense". Only for deep tracker. Determines whether upsampled or compact motion vector image is used as input.', default='mpeg4')
     parser.add_argument('--vector_type', type=str, help='Either "p" to use only p vectors or "pb" to use both p and b vectors ("pb" is only valid if codec is h264).', default='p')
     parser.add_argument('--tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
     parser.add_argument('--tracker_iou_thres', type=float, help='The minimum IoU needed to match a tracked boy with a detected box during data assocation step.', default=0.1)
@@ -104,6 +107,7 @@ if __name__ == "__main__":
                 "scale-{}".format(args.scale),
                 args.codec,
                 args.tracker_type,
+                args.mvs_mode,
                 weights_file_name,
                 args.vector_type,
                 "iou-thres-{}".format(args.tracker_iou_thres),
@@ -113,7 +117,8 @@ if __name__ == "__main__":
                 output_directory_root,
                 "scale-{}".format(args.scale),
                 args.codec,
-                args.tracker_type, 
+                args.tracker_type,
+                args.mvs_mode,
                 weights_file_name,
                 "iou-thres-{}".format(args.tracker_iou_thres),
                 "det-interval-{}".format(args.detector_interval))
@@ -172,14 +177,21 @@ if __name__ == "__main__":
             tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres,
                 use_only_p_vectors=use_only_p_vectors)
         elif args.tracker_type == "deep":
+            if args.codec == "mpeg4" and args.mvs_mode == "upsampled":
+                stats = StatsMpeg4UpsampledFullSinglescale()
+            elif args.codec == "mpeg4" and args.mvs_mode == "dense":
+                stats = StatsMpeg4DenseFullSinglescale()
+            elif args.codec == "h264" and args.mvs_mode == "upsampled":
+                stats = StatsH264UpsampledFullSinglescale()
+            elif args.codec == "h264" and args.mvs_mode == "dense":
+                stats = StatsH264DenseFullSinglescale()
             tracker = MotionVectorTrackerDeep(
                 iou_threshold=args.tracker_iou_thres,
                 weights_file=args.deep_tracker_weights_file,
-                mvs_mode="upsampled",
-                codec="mpeg4",
-                stats=StatsMpeg4UpsampledFull,
+                mvs_mode=args.mvs_mode,
+                codec=args.codec,
+                stats=stats,
                 device=device)
-            # TODO: Add other tracker models here
 
         print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
 

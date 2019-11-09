@@ -6,7 +6,7 @@ import torchvision
 
 from lib.resnet_atrous import resnet18
 from lib.utils import load_pretrained_weights_to_modified_resnet, \
-    change_box_format, normal_init
+    change_box_format
 
 
 class PropagationNetwork(nn.Module):
@@ -14,14 +14,12 @@ class PropagationNetwork(nn.Module):
         super(PropagationNetwork, self).__init__()
 
         self.POOLING_SIZE = 7  # the ROIs are split into m x m regions
-        self.FIXED_BLOCKS = 4
 
         resnet = resnet18()
         resnet_weights = model_zoo.load_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
         load_pretrained_weights_to_modified_resnet(resnet, resnet_weights)
 
         base = [
-            #nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=1, bias=False),
             nn.Conv2d(2, 64, kernel_size=3, stride=1, padding=1, bias=False),  # old version prior to 2019-10-29_01-16-42
             resnet.bn1,
             resnet.relu,
@@ -29,44 +27,27 @@ class PropagationNetwork(nn.Module):
             resnet.layer1,
             resnet.relu,
             resnet.layer2,
-            resnet.relu,
-            #resnet.layer3,
-            #resnet.relu,
-            #resnet.layer4,
-            #resnet.relu
+            resnet.relu
         ]
         self.base = nn.Sequential(*base)
 
-        assert (0 <= self.FIXED_BLOCKS <= 4) # set this value to 0, so we can train all blocks
-        #if self.FIXED_BLOCKS >= 4: # fix all blocks
-        #    for p in self.base[10].parameters(): p.requires_grad = False
-        #if self.FIXED_BLOCKS >= 3: # fix first 3 blocks
-        #    for p in self.base[8].parameters(): p.requires_grad = False
-        if self.FIXED_BLOCKS >= 2: # fix first 2 blocks
-            for p in self.base[6].parameters(): p.requires_grad = False
-        if self.FIXED_BLOCKS >= 1: # fix first 1 block
-            for p in self.base[4].parameters(): p.requires_grad = False
+        # fix pretrained base layers
+        for p in self.base[6].parameters(): p.requires_grad = False
+        for p in self.base[4].parameters(): p.requires_grad = False
 
         self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn4 = nn.BatchNorm2d(256)
         self.relu4 = nn.ReLU(inplace=True)
 
-        # self.conv5 = nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1, bias=False)
-        # self.bn5 = nn.BatchNorm2d(512)
-        # self.relu5 = nn.ReLU(inplace=True)
-        # self.conv6 = nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1, bias=False)
-        # self.bn6 = nn.BatchNorm2d(512)
-        # self.relu6 = nn.ReLU(inplace=True)
-
         self.conv1x1 = nn.Conv2d(256, 2*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
         self.pooling = nn.AvgPool2d(kernel_size=self.POOLING_SIZE, stride=self.POOLING_SIZE)
 
-        #self.init_layers()
-
-
-    def init_layers(self):
-        normal_init(self.base[0], 0, 0.01)
-        normal_init(self.conv1x1, 0, 0.001)
+        # fix pretrained layers
+        for p in self.base[0].parameters(): p.requires_grad = False
+        for p in self.base[1].parameters(): p.requires_grad = False
+        for p in self.base[3].parameters(): p.requires_grad = False
+        for p in self.conv4.parameters(): p.requires_grad = False
+        for p in self.bn4.parameters(): p.requires_grad = False
 
 
     def forward(self, motion_vectors, boxes_prev):
@@ -78,13 +59,6 @@ class PropagationNetwork(nn.Module):
         x = self.conv4(x)
         x = self.bn4(x)
         x = self.relu4(x)
-
-        # x = self.conv5(x)
-        # x = self.bn5(x)
-        # x = self.relu5(x)
-        # x = self.conv6(x)
-        # x = self.bn6(x)
-        # x = self.relu6(x)
 
         x = self.conv1x1(x)
 
@@ -111,19 +85,7 @@ class PropagationNetwork(nn.Module):
         'base.6.0.downsample.0.weight',
         'base.6.2.conv1.weight',
         'base.6.2.conv2.weight',
-        #'base.8.0.conv1.weight',
-        #'base.8.0.conv2.weight',
-        #'base.8.0.downsample.0.weight',
-        #'base.8.2.conv1.weight',
-        #'base.8.2.conv2.weight',
-        #'base.10.0.conv1.weight',
-        #'base.10.0.conv2.weight',
-        #'base.10.0.downsample.0.weight',
-        #'base.10.2.conv1.weight',
-        #'base.10.2.conv2.weight',
         'conv4.weight',
-        #'conv5.weight',
-        #'conv6.weight',
         'conv1x1.weight',
     ]
 
