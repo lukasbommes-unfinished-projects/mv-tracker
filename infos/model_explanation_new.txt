@@ -1,9 +1,9 @@
 ###############################################
 # Best models so far are:
-# 2019-10-30_02-47-42 -- Upsampled, MPEG4, Single Scale, Full dataset, only P vectors
+# 2019-10-30_02-47-42 (model_highest_iou) -- Upsampled, MPEG4, Single Scale, Full dataset, only P vectors
 # 2019-10-28_15-12-38 -- Upsampled, MPEG4, Single Scale, Static cameras, only P vectors
+# 2019-10-29_09-35-25 (model_lowest_loss) -- Upsampled, H264, Single Scale, Full dataset, only P vectors
 # 2019-10-29_09-07-07 -- Upsampled, H264, Single Scale, Static cameras, only P vectors
-# 2019-10-29_09-35-25 -- Upsampled, H264, Single Scale, Full dataset, only P vectors
 #
 ###############################################
 

@@ -1,6 +1,6 @@
 ###############################################
 # Best models so far are:
-# Oct23_09-25-34_295b671b36a0 -- Upsampled, MPEG4, Full dataset
+# Oct23_09-25-34_295b671b36a0 (model_final) -- Upsampled, MPEG4, Full dataset
 # Oct16_09-24-32_de2d11b5ab38 -- Upsampled, MPEG4, Static cameras
 #
 ###############################################

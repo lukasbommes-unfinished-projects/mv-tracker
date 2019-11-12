@@ -17,7 +17,7 @@ import torchvision
 from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsH264DenseFullSinglescale as Stats
+from lib.dataset.stats import StatsH264DenseStaticSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -204,7 +204,7 @@ def train(model, optimizer, loss_type, mvs_mode, scheduler, batch_size, num_epoc
                         logger.info("Saving model with highest IoU so far")
                         torch.save(best_model_wts, os.path.join(outdir, "model_highest_iou.pth"))
                 if save_model and save_model_every_epoch:
-                    best_model_wts = copy.deepcopy(model_student.state_dict())
+                    best_model_wts = copy.deepcopy(model.state_dict())
                     torch.save(best_model_wts, os.path.join(outdir, "model_epoch_{}.pth".format(epoch)))
 
         if scheduler:
@@ -259,7 +259,7 @@ if __name__ == "__main__":
 
     log_to_file = True
     save_model = True
-    save_model_every_epoch = False
+    save_model_every_epoch = True
     write_tensorboard_log = True
     save_normalization_stats = True
 

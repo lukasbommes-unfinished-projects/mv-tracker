@@ -7,9 +7,15 @@
 #
 ###############################################
 
+2019-11-12_03-38-57 Uses model 2019-11-12_03-38-57
+trained via cmd: python train_new.py --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=0 --intial_weights_file=models/tracker/2019-11-12_01-24-35/model_highest_iou.pth
+-> test performance:
 
-[improve medium sized model with 5M parameters from 2019-11-07_05-11-05]
+2019-11-12_01-24-35 Uses model 2019-11-12_01-24-35, based upon 2019-11-06_04-04-14
+trained via cmd: python train_new.py --static_only --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance: (model_highest_iou) better than previous best model 2019-11-06_04-04-14
 
+####
 
 2019-11-08_08-09-19 Using model 2019-11-06_05-18-47
 python train_new.py --num_epochs=160 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-5 --gpu=0

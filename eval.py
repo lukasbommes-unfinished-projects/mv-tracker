@@ -15,7 +15,7 @@ from lib.dataset.loaders import load_detections
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
 from lib.dataset.stats import StatsMpeg4UpsampledFullSinglescale, \
-    StatsH264UpsampledFullSinglescale, StatsMpeg4DenseFullSinglescale,
+    StatsH264UpsampledFullSinglescale, StatsMpeg4DenseFullSinglescale, \
     StatsH264DenseFullSinglescale
 
 
@@ -60,6 +60,7 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
     parser.add_argument('--detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
     parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
     parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
+    parser.add_argument('--repeats', type=int, help='How often to repeat the measurement of each sequence to produce timing statistics (mean and std).', default=10)
     parser.add_argument('--gpu', type=int, help='Index of the GPU on which to run inference of deep tracker. Pass -1 to run on CPU.', default=0)
     return parser.parse_args()
 
@@ -127,157 +128,202 @@ if __name__ == "__main__":
     try:
         os.makedirs(output_directory)
     except FileExistsError:
-        print("Output directory {} exists. Skipping.".format(output_directory))
-        exit()
+        #print("Output directory {} exists. Skipping.".format(output_directory))
+        #exit()
+        try:
+            os.remove(os.path.join(output_directory, "time_perf.log"))
+        except OSError:
+            pass
 
     print("Created output directory {}".format(output_directory))
 
-    dts = {}
-    for data_dir in data_dirs:
-        num_frames = len(glob.glob(os.path.join(data_dir, 'img1/*.jpg')))
-        detections = load_detections(os.path.join(data_dir, 'det/det.txt'), num_frames)
-        sequence_name = data_dir.split('/')[-1]
-        sequence_path = '/'.join(data_dir.split('/')[:-1])
-        detector_name = sequence_name.split('-')[-1]
-        dts[sequence_name] = {
-            "update": [],
-            "predict": [],
-            "total": []
-        }
-        dts["accumulated"] = {
-            "update": [],
-            "predict": [],
-            "total": []
-        }
+    overall_stats = {
+        "mean_dt_predict": [],
+        "mean_dt_update": [],
+        "mean_dt_total": [],
+        "mean_fps_predict": [],
+        "mean_fps_update": [],
+        "mean_fps_total": []
+    }
 
-        print("Loading annotation data from", data_dir)
+    for repetition in range(args.repeats):
+        dts = {}
 
-        if args.benchmark == "MOT17":
-            if detector_name not in eval_detectors:
-                continue
+        for data_dir in data_dirs:
+            num_frames = len(glob.glob(os.path.join(data_dir, 'img1/*.jpg')))
+            detections = load_detections(os.path.join(data_dir, 'det/det.txt'), num_frames)
+            sequence_name = data_dir.split('/')[-1]
+            sequence_path = '/'.join(data_dir.split('/')[:-1])
+            detector_name = sequence_name.split('-')[-1]
+            dts[sequence_name] = {
+                "update": [],
+                "predict": [],
+                "total": []
+            }
+            dts["accumulated"] = {
+                "update": [],
+                "predict": [],
+                "total": []
+            }
 
-            # get the video file from FRCNN sub directory
-            sequence_name_without_detector = '-'.join(sequence_name.split('-')[:-1])
-            sequence_name_frcnn = "{}-FRCNN".format(sequence_name_without_detector)
-            video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}-{}.mp4".format(sequence_name_frcnn, args.codec, args.scale))
+            print("Loading annotation data from", data_dir)
 
-        else:
-            video_file = os.path.join(data_dir, "{}-{}-{}.mp4".format(sequence_name, args.codec, args.scale))
+            if args.benchmark == "MOT17":
+                if detector_name not in eval_detectors:
+                    continue
 
-        print("Loading video file from", video_file)
+                # get the video file from FRCNN sub directory
+                sequence_name_without_detector = '-'.join(sequence_name.split('-')[:-1])
+                sequence_name_frcnn = "{}-FRCNN".format(sequence_name_without_detector)
+                video_file = os.path.join(sequence_path, sequence_name_frcnn, "{}-{}-{}.mp4".format(sequence_name_frcnn, args.codec, args.scale))
 
-        if args.gpu == -1:
-            device = torch.device("cpu")
-        else:
-            device = torch.device("cuda:{}".format(args.gpu))
+            else:
+                video_file = os.path.join(data_dir, "{}-{}-{}.mp4".format(sequence_name, args.codec, args.scale))
 
-        # init tracker
-        if args.tracker_type == "baseline":
-            use_only_p_vectors = (args.vector_type == "p")
-            tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres,
-                use_only_p_vectors=use_only_p_vectors)
-        elif args.tracker_type == "deep":
-            if args.codec == "mpeg4" and args.mvs_mode == "upsampled":
-                stats = StatsMpeg4UpsampledFullSinglescale()
-            elif args.codec == "mpeg4" and args.mvs_mode == "dense":
-                stats = StatsMpeg4DenseFullSinglescale()
-            elif args.codec == "h264" and args.mvs_mode == "upsampled":
-                stats = StatsH264UpsampledFullSinglescale()
-            elif args.codec == "h264" and args.mvs_mode == "dense":
-                stats = StatsH264DenseFullSinglescale()
-            tracker = MotionVectorTrackerDeep(
-                iou_threshold=args.tracker_iou_thres,
-                weights_file=args.deep_tracker_weights_file,
-                mvs_mode=args.mvs_mode,
-                codec=args.codec,
-                stats=stats,
-                device=device)
+            print("Loading video file from", video_file)
 
-        print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
+            if args.gpu == -1:
+                device = torch.device("cpu")
+            else:
+                device = torch.device("cuda:{}".format(args.gpu))
 
-        cap = VideoCap()
-        ret = cap.open(video_file)
-        if not ret:
-            raise RuntimeError("Could not open the video file")
+            # init tracker
+            if args.tracker_type == "baseline":
+                use_only_p_vectors = (args.vector_type == "p")
+                tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres,
+                    use_only_p_vectors=use_only_p_vectors)
+            elif args.tracker_type == "deep":
+                if args.codec == "mpeg4" and args.mvs_mode == "upsampled":
+                    stats = StatsMpeg4UpsampledFullSinglescale()
+                elif args.codec == "mpeg4" and args.mvs_mode == "dense":
+                    stats = StatsMpeg4DenseFullSinglescale()
+                elif args.codec == "h264" and args.mvs_mode == "upsampled":
+                    stats = StatsH264UpsampledFullSinglescale()
+                elif args.codec == "h264" and args.mvs_mode == "dense":
+                    stats = StatsH264DenseFullSinglescale()
+                tracker = MotionVectorTrackerDeep(
+                    iou_threshold=args.tracker_iou_thres,
+                    weights_file=args.deep_tracker_weights_file,
+                    mvs_mode=args.mvs_mode,
+                    codec=args.codec,
+                    stats=stats,
+                    device=device)
 
-        frame_idx = 0
+            print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
 
-        with open(os.path.join(output_directory, '{}.txt'.format(sequence_name)), mode="w") as csvfile:
+            cap = VideoCap()
+            ret = cap.open(video_file)
+            if not ret:
+                raise RuntimeError("Could not open the video file")
 
+            frame_idx = 0
+
+            with open(os.path.join(output_directory, '{}.txt'.format(sequence_name)), mode="w") as csvfile:
+
+                csv_writer = csv.writer(csvfile, delimiter=',')
+
+                pbar = tqdm(total=len(detections))
+                while True:
+                    ret, frame, motion_vectors, frame_type, _ = cap.read()
+                    if not ret:
+                        break
+
+                    t_start_total = time.process_time()
+
+                    # update with detections
+                    if frame_idx % args.detector_interval == 0:
+                        t_start_update = time.process_time()
+                        if args.tracker_type == "baseline":
+                            tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale)
+                        elif args.tracker_type == "deep":
+                            tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale, frame.shape)
+                        dts[sequence_name]["update"].append(time.process_time() - t_start_update)
+
+
+                    # prediction by tracker
+                    else:
+                        t_start_predict = time.process_time()
+                        if args.tracker_type == "baseline":
+                            tracker.predict(motion_vectors, frame_type)
+                        elif args.tracker_type == "deep":
+                            tracker.predict(motion_vectors, frame_type, frame.shape)
+                        dts[sequence_name]["predict"].append(time.process_time() - t_start_predict)
+
+                    dts[sequence_name]["total"].append(time.process_time() - t_start_total)
+
+                    track_ids = tracker.get_box_ids()
+                    track_boxes = tracker.get_boxes()
+                    # revert scaling so that comparison with unscaled ground truth in compute_metrics.py makes sense
+                    track_boxes = track_boxes / args.scale
+
+
+                    for track_box, track_id in zip(track_boxes, track_ids):
+                        csv_writer.writerow([frame_idx+1, track_id, track_box[0], track_box[1],
+                            track_box[2], track_box[3], -1, -1, -1, -1])
+
+                    frame_idx += 1
+                    pbar.update(1)
+
+            dts["accumulated"]["update"].extend(dts[sequence_name]["update"])
+            dts["accumulated"]["predict"].extend(dts[sequence_name]["predict"])
+            dts["accumulated"]["total"].extend(dts[sequence_name]["total"])
+
+            cap.release()
+            pbar.close()
+
+        # write timing output file for current repitition
+        with open(os.path.join(output_directory, 'time_perf.log'), mode="a") as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
+            csv_writer.writerow(["Repetition {}".format(repetition),'','','','','',''])
+            csv_writer.writerow(["sequence", "predict mean dt", "predict std dt",
+                "update mean dt", "update std dt", "total mean dt", "total std dt"])
+            for sequence_name, subdict in dts.items():
+                if sequence_name != "accumulated":
+                    csv_writer.writerow([sequence_name, np.mean(subdict["predict"]),
+                        np.std(subdict["predict"]), np.mean(subdict["update"]),
+                        np.std(subdict["update"]), np.mean(subdict["total"]),
+                        np.std(subdict["total"])])
 
-            pbar = tqdm(total=len(detections))
-            while True:
-                ret, frame, motion_vectors, frame_type, _ = cap.read()
-                if not ret:
-                    break
+            # compute average over entire dataset
+            csv_writer.writerow(["Averages for this repetition:",'','','','','',''])
+            csv_writer.writerow(["predict mean dt", "predict std dt", "update mean dt",
+                "update std dt", "total mean dt", "total std dt", ""])
+            csv_writer.writerow([np.mean(dts["accumulated"]["predict"]),
+                np.std(dts["accumulated"]["predict"]),
+                np.mean(dts["accumulated"]["update"]),
+                np.std(dts["accumulated"]["update"]),
+                np.mean(dts["accumulated"]["total"]),
+                np.std(dts["accumulated"]["total"]), ""])
+            csv_writer.writerow(["predict mean fps",'update mean fps','total mean fps','','','',''])
+            csv_writer.writerow([1/np.mean(dts["accumulated"]["predict"]),
+                1/np.mean(dts["accumulated"]["update"]),
+                1/np.mean(dts["accumulated"]["total"]),'','','',''])
+            csv_writer.writerow(["####################################################################################################################################",'','','','','',''])
 
-                t_start_total = time.process_time()
+            overall_stats["mean_dt_predict"].append(np.mean(dts["accumulated"]["predict"]))
+            overall_stats["mean_dt_update"].append(np.mean(dts["accumulated"]["update"]))
+            overall_stats["mean_dt_total"].append(np.mean(dts["accumulated"]["total"]))
+            overall_stats["mean_fps_predict"].append(1/np.mean(dts["accumulated"]["predict"]))
+            overall_stats["mean_fps_update"].append(1/np.mean(dts["accumulated"]["update"]))
+            overall_stats["mean_fps_total"].append(1/np.mean(dts["accumulated"]["total"]))
 
-                # update with detections
-                if frame_idx % args.detector_interval == 0:
-                    t_start_update = time.process_time()
-                    if args.tracker_type == "baseline":
-                        tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale)
-                    elif args.tracker_type == "deep":
-                        tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale, frame.shape)
-                    dts[sequence_name]["update"].append(time.process_time() - t_start_update)
-
-
-                # prediction by tracker
-                else:
-                    t_start_predict = time.process_time()
-                    if args.tracker_type == "baseline":
-                        tracker.predict(motion_vectors, frame_type)
-                    elif args.tracker_type == "deep":
-                        tracker.predict(motion_vectors, frame_type, frame.shape)
-                    dts[sequence_name]["predict"].append(time.process_time() - t_start_predict)
-
-                dts[sequence_name]["total"].append(time.process_time() - t_start_total)
-
-                track_ids = tracker.get_box_ids()
-                track_boxes = tracker.get_boxes()
-                # revert scaling so that comparison with unscaled ground truth in compute_metrics.py makes sense
-                track_boxes = track_boxes / args.scale
-
-
-                for track_box, track_id in zip(track_boxes, track_ids):
-                    csv_writer.writerow([frame_idx+1, track_id, track_box[0], track_box[1],
-                        track_box[2], track_box[3], -1, -1, -1, -1])
-
-                frame_idx += 1
-                pbar.update(1)
-
-        dts["accumulated"]["update"].extend(dts[sequence_name]["update"])
-        dts["accumulated"]["predict"].extend(dts[sequence_name]["predict"])
-        dts["accumulated"]["total"].extend(dts[sequence_name]["total"])
-
-        cap.release()
-        pbar.close()
-
-    # write frame rate output file
-    with open(os.path.join(output_directory, 'time_perf.log'), mode="w") as csvfile:
+    # write overall timing stats
+    with open(os.path.join(output_directory, 'time_perf.log'), mode="a") as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
-        csv_writer.writerow(["sequence", "predict mean dt", "predict std dt",
-            "update mean dt", "update std dt", "total mean dt", "total std dt"])
-        for sequence_name, subdict in dts.items():
-            if sequence_name != "accumulated":
-                csv_writer.writerow([sequence_name, np.mean(subdict["predict"]),
-                    np.std(subdict["predict"]), np.mean(subdict["update"]),
-                    np.std(subdict["update"]), np.mean(subdict["total"]),
-                    np.std(subdict["total"])])
-
-        # compute average over entire dataset
-        csv_writer.writerow(["Dataset averages:",'','','','','',''])
-        csv_writer.writerow(["predict mean dt", "predict std dt", "update mean dt",
-            "update std dt", "total mean dt", "total std dt", ""])
-        csv_writer.writerow([np.mean(dts["accumulated"]["predict"]),
-            np.std(dts["accumulated"]["predict"]),
-            np.mean(dts["accumulated"]["update"]),
-            np.std(dts["accumulated"]["update"]),
-            np.mean(dts["accumulated"]["total"]),
-            np.std(dts["accumulated"]["total"]), ""])
-        csv_writer.writerow(["predict mean fps",'update mean fps','total mean fps','','','',''])
-        csv_writer.writerow([1/np.mean(dts["accumulated"]["predict"]),
-            1/np.mean(dts["accumulated"]["update"]),
-            1/np.mean(dts["accumulated"]["total"]),'','','',''])
+        csv_writer.writerow(["Overall statistics:",'','','','','',''])
+        csv_writer.writerow(["predict mean of mean dt", "predict std of mean dt",
+            "update mean of mean dt", "update std of mean dt", "total mean of mean dt", "total std of mean dt",""])
+        csv_writer.writerow([np.mean(overall_stats["mean_dt_predict"]),
+            np.std(overall_stats["mean_dt_predict"]),
+            np.mean(overall_stats["mean_dt_update"]),
+            np.std(overall_stats["mean_dt_update"]),
+            np.mean(overall_stats["mean_dt_total"]),
+            np.std(overall_stats["mean_dt_total"])])
+        csv_writer.writerow(["predict mean of mean fps", "predict std of mean fps",
+            "update mean of mean fps", "update std of mean fps", "total mean of mean fps", "total std of mean fps",""])
+        csv_writer.writerow([np.mean(overall_stats["mean_fps_predict"]),
+            np.std(overall_stats["mean_fps_predict"]),
+            np.mean(overall_stats["mean_fps_update"]),
+            np.std(overall_stats["mean_fps_update"]),
+            np.mean(overall_stats["mean_fps_total"]),
+            np.std(overall_stats["mean_fps_total"])])
