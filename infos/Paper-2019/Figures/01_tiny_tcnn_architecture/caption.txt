@@ -1,0 +1,1 @@
+Additional infos in caption: All conv layer are 3x3, have no bias, and padding 1, stride 1 if no spatial reduction takes place, stride 2 otherwise, maxpool has kernel size 3

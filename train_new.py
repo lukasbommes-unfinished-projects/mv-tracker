@@ -17,7 +17,7 @@ import torchvision
 from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsH264DenseStaticSinglescale as Stats
+from lib.dataset.stats import StatsH264DenseFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -259,7 +259,7 @@ if __name__ == "__main__":
 
     log_to_file = True
     save_model = True
-    save_model_every_epoch = True
+    save_model_every_epoch = False
     write_tensorboard_log = True
     save_normalization_stats = True
 
