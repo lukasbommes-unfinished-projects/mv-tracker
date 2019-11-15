@@ -38,20 +38,34 @@ def draw_motion_vectors(frame, motion_vectors, format='torch'):
                 for y in range(motion_vectors.shape[1]):
                     motion_x = motion_vectors[0, y, x]
                     motion_y = motion_vectors[1, y, x]
-                    end_pt = (x * 16 + 8, y * 16 + 8)  # the x,y coords correspond to the vector destination
-                    start_pt = (end_pt[0] - motion_x, end_pt[1] - motion_y)  # vector source
+                    start_pt = (x * 16 + 8, y * 16 + 8)  # the x,y coords correspond to the vector destination
+                    end_pt = (start_pt[0] - motion_x, start_pt[1] - motion_y)  # vector source
                     frame = cv2.arrowedLine(frame, start_pt, end_pt, (0, 0, 255), 1, cv2.LINE_AA, 0, 0.3)
     elif format == 'numpy':
         if np.shape(motion_vectors)[0] > 0:
             num_mvs = np.shape(motion_vectors)[0]
             for mv in np.split(motion_vectors, num_mvs):
-                start_pt = (mv[0, 3], mv[0, 4])
-                end_pt = (mv[0, 5], mv[0, 6])
+                start_pt = (mv[0, 5], mv[0, 6])
+                end_pt = (mv[0, 3], mv[0, 4])
                 if mv[0, 0] < 0:
                     frame = cv2.arrowedLine(frame, start_pt, end_pt, (0, 0, 255), 1, cv2.LINE_AA, 0, 0.3)
                 else:
                     frame = cv2.arrowedLine(frame, start_pt, end_pt, (0, 255, 0), 1, cv2.LINE_AA, 0, 0.3)
     return frame
+
+
+def draw_macroblocks(frame, motion_vectors, alpha=1.0):
+    if np.shape(motion_vectors)[0] > 0:
+        frame_cpy = frame.copy()
+        num_mvs = np.shape(motion_vectors)[0]
+        for mv in np.split(motion_vectors, num_mvs):
+            mb_xmin = int(mv[0, 5] - 0.5*mv[0, 1])  # x_dst - 1/2 m_w
+            mb_ymin = int(mv[0, 6] - 0.5*mv[0, 2])  # y_dst - 1/2 m_h
+            mb_xmax = int(mv[0, 5] + 0.5*mv[0, 1] - 1)  # x_dst + 1/2 m_w - 1
+            mb_ymax = int(mv[0, 6] + 0.5*mv[0, 2] - 1)  # y_dst + 1/2 m_h - 1
+            frame = cv2.rectangle(frame, (mb_xmin, mb_ymin), (mb_xmax, mb_ymax), (255, 255, 255))
+        frame_overlay = cv2.addWeighted(frame, alpha, frame_cpy, 1-alpha, gamma=0)
+    return frame_overlay
 
 
 def draw_boxes(frame, bounding_boxes, box_ids=None, color=(0, 255, 0)):

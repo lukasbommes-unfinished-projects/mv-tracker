@@ -235,8 +235,6 @@ class MotionVectorDataset(torch.utils.data.Dataset):
     def __len__(self):
         """Return the total length of the dataset."""
         total_len = len(self.index)
-        if self.DEBUG:
-            print("Overall length of {} dataset: {}".format(self.mode, total_len))
         return total_len
 
 
@@ -364,6 +362,10 @@ if __name__ == "__main__":
         codec=codec, scales=scales, mvs_mode=mvs_mode, static_only=static_only,
         exclude_keyframes=exclude_keyframes, visu=True, debug=True,
         mode=x) for x in ["train", "val"]}
+
+    print("Dataset stats:")
+    for mode, dataset in datasets.items():
+        print("{} dataset has {} samples".format(mode, len(dataset)))
 
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=batch_size,
         shuffle=False, num_workers=0) for x in ["train", "val"]}

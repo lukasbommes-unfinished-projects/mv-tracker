@@ -151,7 +151,7 @@ def motion_vectors_to_hsv_image(motion_vectors, frame_shape=(1920, 1080)):
         mvs_motion_y = (motion_vectors[:, 8] / motion_vectors[:, 9]).reshape(-1, 1)
 
         # transform x and y motion to angle in range 0...180 and magnitude in range 0...255
-        mvs_motion_magnitude, mvs_motion_angle = cv2.cartToPolar(mvs_motion_x, mvs_motion_y)
+        mvs_motion_magnitude, mvs_motion_angle = cv2.cartToPolar(mvs_motion_x, -1.0*mvs_motion_y)
         mvs_motion_angle = mvs_motion_angle * 180 / (2 * np.pi)  # hue channel is [0, 180]
         mvs_motion_magnitude = cv2.normalize(mvs_motion_magnitude, None, 0, 255, cv2.NORM_MINMAX)
 
@@ -252,6 +252,27 @@ def motion_vectors_to_grid(motion_vectors, frame_shape=(1920, 1080)):
     return motion_vectors_grid
 
 
+def motion_vectors_to_hsv_grid(motion_vectors, frame_shape=(1920, 1080)):
+    """Converts motion vectors into an image."""
+    motion_vectors_grid = np.zeros((math.ceil(frame_shape[1]/16), math.ceil(frame_shape[0]/16), 3), dtype=np.uint8)
+    if motion_vectors.shape[0] > 0:
+        motion_vectors = motion_vectors.astype(np.float32)
+        mvs_x = motion_vectors[:, 5].astype(np.int64)
+        mvs_y = motion_vectors[:, 6].astype(np.int64)
+        x = ((mvs_x - 8) // 16).astype(np.int64)
+        y = ((mvs_y - 8) // 16).astype(np.int64)
+        mvs_motion_x = motion_vectors[:, 7] / motion_vectors[:, 9]  # x component
+        mvs_motion_y = motion_vectors[:, 8] / motion_vectors[:, 9]  # x component
+        mvs_motion_magnitude, mvs_motion_angle = cv2.cartToPolar(mvs_motion_x, -1.0*mvs_motion_y)
+        mvs_motion_angle = mvs_motion_angle * 180 / (2 * np.pi)  # hue channel is [0, 180]
+        mvs_motion_magnitude = cv2.normalize(mvs_motion_magnitude, None, 0, 255, cv2.NORM_MINMAX)
+        motion_vectors_grid[y, x, 0] = mvs_motion_angle.reshape(-1)
+        motion_vectors_grid[y, x, 1] = mvs_motion_magnitude.reshape(-1)
+        motion_vectors_grid[:, :, 2] = 255
+        motion_vectors_grid = cv2.cvtColor(motion_vectors_grid, cv2.COLOR_HSV2BGR)
+    return motion_vectors_grid
+
+
 def motion_vectors_to_grid_interpolated(motion_vectors, frame_shape=(1920, 1080), method='nearest'):
     """Interpolates motion vectors on a 16 x 16 grid and converts them into an image."""
     motion_vectors_grid = np.zeros((math.ceil(frame_shape[1]/16), math.ceil(frame_shape[0]/16), 3), dtype=np.float32)
@@ -266,4 +287,26 @@ def motion_vectors_to_grid_interpolated(motion_vectors, frame_shape=(1920, 1080)
         mvs_y_motion_interp = griddata((mvs_x, mvs_y), mvs_y_motion, (xi[None, :], yi[:, None]), method=method)
         motion_vectors_grid[:, :, 2] = mvs_x_motion_interp
         motion_vectors_grid[:, :, 1] = mvs_y_motion_interp
+    return motion_vectors_grid
+
+
+def motion_vectors_to_hsv_grid_interpolated(motion_vectors, frame_shape=(1920, 1080), method='nearest'):
+    """Interpolates motion vectors on a 16 x 16 grid and converts them into an image."""
+    motion_vectors_grid = np.zeros((math.ceil(frame_shape[1]/16), math.ceil(frame_shape[0]/16), 3), dtype=np.uint8)
+    if motion_vectors.shape[0] > 0:
+        mvs_x = motion_vectors[:, 5]
+        mvs_y = motion_vectors[:, 6]
+        mvs_x_motion = motion_vectors[:, 7] / motion_vectors[:, 9]
+        mvs_y_motion = motion_vectors[:, 8] / motion_vectors[:, 9]
+        xi = np.arange(8, math.ceil(frame_shape[0] / 16) * 16, 16)
+        yi = np.arange(8, math.ceil(frame_shape[1] / 16) * 16, 16)
+        mvs_motion_magnitude, mvs_motion_angle = cv2.cartToPolar(mvs_x_motion, -1.0*mvs_y_motion)
+        mvs_motion_angle = mvs_motion_angle * 180 / (2 * np.pi)  # hue channel is [0, 180]
+        mvs_motion_magnitude = cv2.normalize(mvs_motion_magnitude, None, 0, 255, cv2.NORM_MINMAX)
+        mvs_motion_angle_interp = griddata((mvs_x, mvs_y), mvs_motion_angle, (xi[None, :], yi[:, None]), method=method)
+        mvs_motion_magnitude_interp = griddata((mvs_x, mvs_y), mvs_motion_magnitude, (xi[None, :], yi[:, None]), method=method)
+        motion_vectors_grid[:, :, 0] = np.squeeze(mvs_motion_angle_interp)
+        motion_vectors_grid[:, :, 1] = np.squeeze(mvs_motion_magnitude_interp)
+        motion_vectors_grid[:, :, 2] = 255
+        motion_vectors_grid = cv2.cvtColor(motion_vectors_grid, cv2.COLOR_HSV2BGR)
     return motion_vectors_grid
