@@ -14,7 +14,7 @@ from lib.dataset.velocities import velocities_from_boxes, velocities_from_boxes_
 from lib.visu import draw_boxes, draw_velocities, draw_motion_vectors
 
 # for testing
-from lib.dataset.stats import StatsMpeg4DenseFullSinglescale as Stats
+from lib.dataset.stats import StatsH264DenseFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 
@@ -76,10 +76,10 @@ class MotionVectorDataset(torch.utils.data.Dataset):
             only P-vectors which reference to past frames or "p+b" to use both
             P- and B-vectors. B-vectors reference to future frames (in display
             order). Note that the option "p+b" is only available for codec
-            "h264". If `vector_type` is "p" motion vectors are returned as torch
-            tensor with 3 channels in RGB order. For "p+b" a list of two tensors
-            each with 3 channels in RGB order is returned. The first item in the
-            list represents the P-vectors and the second tensor the B-vectors.
+            "h264". For both vector types a list with one ("p") or two ("p+b")
+            torch tensors with 3 channels in RGB order is returned. In case of
+            "p+b" the first item in the list represents the P-vectors and the
+            second tensor the B-vectors.
 
         static_only (`bool`): If True use only those videos in MOT15 and MOT17
             which have a static (not moving) camera.
@@ -149,6 +149,9 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         self.visu = visu
 
         self.index = []   # stores (sequence_idx, scale_idx, frame_idx) for available samples
+
+        if self.codec == "mpeg4" and self.vector_type != "p":
+            raise ValueError('MPEG4 can only be used with vector type "p".')
 
         self.get_sequence_lengths_()
         self.load_groundtruth_()
@@ -249,6 +252,31 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         return total_len
 
 
+    def preprocess_motion_vectors(self, motion_vectors, frame_shape):
+        """Preprocesses motion vectors depending on the codec, vector type and mvs_mode."""
+        motion_vectors_list = []
+        motion_vectors = normalize_vectors(motion_vectors)
+        if self.vector_type == "p+b":
+            sources = ["past", "future"]
+            motion_vectors_for_visu = np.copy(get_nonzero_vectors(motion_vectors))
+        elif self.vector_type == "p":
+            sources = ["past"]
+        for source in sources:
+            mvs = get_vectors_by_source(motion_vectors, source)
+            if self.vector_type == "p":
+                motion_vectors_for_visu = np.copy(get_nonzero_vectors(mvs))
+            if self.mvs_mode == "upsampled":
+                mvs = get_nonzero_vectors(mvs)
+                mvs = motion_vectors_to_image(mvs, frame_shape)
+            elif self.mvs_mode == "dense":
+                if self.codec == "mpeg4":
+                    mvs = motion_vectors_to_grid(mvs, frame_shape)
+                elif self.codec == "h264":
+                    mvs = motion_vectors_to_grid_interpolated(mvs, frame_shape)
+            motion_vectors_list.append(torch.from_numpy(mvs).float())
+        return motion_vectors_list, motion_vectors_for_visu
+
+
     def __getitem__(self, idx):
         """Retrieve item with index `idx` from the dataset."""
         sequence_idx, scale_idx, frame_idx = self.index[idx]
@@ -260,24 +288,7 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                 "frame shape: {}, scale: {}").format(frame_idx + 1, frame_type,
                 motion_vectors.shape, frame.shape, self.scales[scale_idx]))
 
-        # convert motion vectors to image (for I frame black image is returned)
-        if self.vector_type == "p":
-            motion_vectors = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
-        motion_vectors = normalize_vectors(motion_vectors)
-
-        if self.visu:
-            motion_vectors_for_visu = np.copy(get_nonzero_vectors(motion_vectors))
-
-        if self.mvs_mode == "upsampled":
-            motion_vectors = get_nonzero_vectors(motion_vectors)
-            motion_vectors = motion_vectors_to_image(motion_vectors, (frame.shape[1], frame.shape[0]))
-        elif self.mvs_mode == "dense":
-            if self.codec == "mpeg4":
-                motion_vectors = motion_vectors_to_grid(motion_vectors, (frame.shape[1], frame.shape[0]))
-            elif self.codec == "h264":
-                motion_vectors = motion_vectors_to_grid_interpolated(motion_vectors, (frame.shape[1], frame.shape[0]))
-
-        motion_vectors = torch.from_numpy(motion_vectors).float()
+        motion_vectors, motion_vectors_for_visu = self.preprocess_motion_vectors(motion_vectors, (frame.shape[1], frame.shape[0]))
 
         if self.visu:
             frame = draw_motion_vectors(frame, motion_vectors_for_visu, format='numpy')
@@ -337,11 +348,11 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         if self.transforms:
             sample = self.transforms(sample)
 
-        # swap channel order of motion vectors from BGR to RGB
-        sample["motion_vectors"] = sample["motion_vectors"][..., [2, 1, 0]]
-
-        # swap motion vector axes so that shape is (C, H, W) instead of (H, W, C)
-        sample["motion_vectors"] = sample["motion_vectors"].permute(2, 0, 1)
+        for i in range(len(sample["motion_vectors"])):
+            # swap channel order of motion vectors from BGR to RGB
+            sample["motion_vectors"][i] = sample["motion_vectors"][i][..., [2, 1, 0]]
+            # swap motion vector axes so that shape is (C, H, W) instead of (H, W, C)
+            sample["motion_vectors"][i] = sample["motion_vectors"][i].permute(2, 0, 1)
 
         if self.visu:
             sample["frame"] = frame
@@ -353,9 +364,9 @@ class MotionVectorDataset(torch.utils.data.Dataset):
 if __name__ == "__main__":
 
     batch_size = 1
-    codec = "mpeg4"
+    codec = "h264"
     mvs_mode = "dense"
-    vector_type = "p"
+    vector_type = "p+b"
     static_only = False
     exclude_keyframes = True
     scales = [1.0]
@@ -390,35 +401,34 @@ if __name__ == "__main__":
     for batch_idx in range(batch_size):
         cv2.namedWindow("frame-{}".format(batch_idx), cv2.WINDOW_NORMAL)
         cv2.resizeWindow("frame-{}".format(batch_idx), 640, 360)
-        cv2.namedWindow("motion_vectors-{}".format(batch_idx), cv2.WINDOW_NORMAL)
-        cv2.resizeWindow("motion_vectors-{}".format(batch_idx), 640, 360)
+        cv2.namedWindow("motion_vectors-p-{}".format(batch_idx), cv2.WINDOW_NORMAL)
+        cv2.resizeWindow("motion_vectors-p-{}".format(batch_idx), 640, 360)
+        if vector_type == "p+b":
+            cv2.namedWindow("motion_vectors-b-{}".format(batch_idx), cv2.WINDOW_NORMAL)
+            cv2.resizeWindow("motion_vectors-b-{}".format(batch_idx), 640, 360)
 
     for step, sample in enumerate(dataloaders["train"]):
-
-        #pickle.dump(sample, open("overfit_dense_model/data/{:06d}".format(step), "wb"))
-
         for batch_idx in range(batch_size):
 
             frame = sample["frame"][batch_idx].numpy()
-            motion_vectors = sample["motion_vectors"][batch_idx]
             boxes_prev = sample["boxes_prev"][batch_idx]
             boxes = sample["boxes"][batch_idx]
             velocities = sample["velocities"][batch_idx]
 
-            motion_vectors = motion_vectors.permute(1, 2, 0)
-            motion_vectors = motion_vectors[..., [2, 1, 0]]
-            motion_vectors = motion_vectors.numpy()
-            motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
+            for i in range(len(sample["motion_vectors"])):
+                motion_vectors = sample["motion_vectors"][i][batch_idx]
+                motion_vectors = motion_vectors.permute(1, 2, 0)
+                motion_vectors = motion_vectors[..., [2, 1, 0]]
+                motion_vectors = motion_vectors.numpy()
+                motion_vectors = (motion_vectors - np.min(motion_vectors)) / (np.max(motion_vectors) - np.min(motion_vectors))
+                sample["motion_vectors"][i] = motion_vectors
 
-            # draw boxes on motion vector image
-            #motion_vectors = draw_boxes(motion_vectors, boxes_prev[:, 1:], None, color=(200, 200, 200))
-            #motion_vectors = draw_boxes(motion_vectors, boxes[:, 1:], None, color=(255, 255, 255))
-            #motion_vectors = draw_velocities(motion_vectors, boxes[:, 1:], velocities, scale=1000)
-
-            print("step: {}, MVS shape: {}".format(step, motion_vectors.shape))
+            print("step: {}".format(step))
 
             cv2.imshow("frame-{}".format(batch_idx), frame)
-            cv2.imshow("motion_vectors-{}".format(batch_idx), motion_vectors)
+            cv2.imshow("motion_vectors-p-{}".format(batch_idx), sample["motion_vectors"][0])
+            if vector_type == "p+b":
+                cv2.imshow("motion_vectors-b-{}".format(batch_idx), sample["motion_vectors"][1])
 
         key = cv2.waitKey(1)
         if not step_wise and key == ord('s'):

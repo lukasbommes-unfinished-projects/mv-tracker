@@ -17,10 +17,12 @@ sample = custom_transform(sample)
 
 The sample should be a Python dictionary with the following key values pairs:
 
-- motion_vectors (`torch.Tensor`): Motion vector image of shape
-    (B, H, W, C) or (H, W, C), dtype float32 and channel order BGR. Typically,
-    C = 3. Blue channel has no meaning, green channel corresponds to y component
-    of motion vector and red channel to x component of motion vector.
+- motion_vectors (`list` of `torch.Tensor`): Each item is a motion vector image
+    of shape (B, H, W, C) or (H, W, C), dtype float32 and channel order BGR.
+    Typically, C = 3. Blue channel has no meaning, green channel corresponds to
+    y component of motion vector and red channel to x component of motion vector.
+    The list can contain up to two items where the first one corresponds to the
+    P vectors and the second one to the B vectors. The second item is optional.
 
 - boxes_prev (`torch.Tensor`): Set of bounding boxes in previous frame. Shape
     (B, N, 5) or (N, 5) with batch size B, number of boxes N and format
@@ -55,14 +57,17 @@ class StandardizeMotionVectors:
             divide the mean subtracted motion vector image.
     """
     def __init__(self, mean, std):
-        self.mean = torch.tensor(mean)
-        self.std = torch.tensor(std)
+        self.mean = mean
+        self.std = std
 
     def __call__(self, sample):
-        motion_vectors = sample["motion_vectors"].clone()
-        motion_vectors = (motion_vectors - self.mean) / self.std
         sample_transformed = copy.deepcopy(sample)
-        sample_transformed["motion_vectors"] = motion_vectors
+        for i in range(len(sample["motion_vectors"])):
+            motion_vectors = sample["motion_vectors"][i].clone()
+            mean = torch.tensor(self.mean[i])
+            std = torch.tensor(self.std[i])
+            motion_vectors = (motion_vectors - mean) / std
+            sample_transformed["motion_vectors"][i] = motion_vectors
         return sample_transformed
 
     def __repr__(self):
@@ -108,156 +113,156 @@ class StandardizeVelocities:
         return repr
 
 
-def scale_image_(image, scale=600, max_size=1000):
-    # determine the scaling factor
-    image = image.numpy()
-    size_min = np.min(image.shape[-3:-1])
-    size_max = np.max(image.shape[-3:-1])
-    scaling_factor = float(scale) / float(size_min)
-    if np.round(scaling_factor * size_max) > max_size:
-        scaling_factor = float(max_size) / float(size_max)
-     # scale the frame
-    if image.ndim == 3:
-        image_resized = cv2.resize(image, None, None, fx=scaling_factor,
-            fy=scaling_factor, interpolation=cv2.INTER_LINEAR)
-    elif image.ndim == 4:
-        image_resized = []
-        for batch_idx in range(image.shape[0]):
-            image_resized.append(cv2.resize(image[batch_idx, ...], None, None,
-                fx=scaling_factor, fy=scaling_factor,
-                interpolation=cv2.INTER_LINEAR))
-        image_resized = np.stack(image_resized, axis=0)
-    else:
-        raise ValueError("Invalid frame dimension")
-    image_resized = torch.from_numpy(image_resized)
-    return image_resized, scaling_factor
-
-
-def scale_boxes_(sample, sample_transformed, scaling_factor, box_types):
-    # helper to scale multiple boxes only if exist in dictionary
-    for box_type in box_types:
-        try:
-            boxes = sample[box_type].clone()
-        except KeyError:
-            pass
-        else:
-            boxes[..., 1:] *= scaling_factor
-            sample_transformed[box_type] = boxes
-
-
-class ScaleImage:
-    """Scale the motion vectors or frame considering a maximum size.
-
-    Frame is scaled so that it's shortest side has the size specified by the
-    `scale` parameter. The aspect ratio is constant. In case, the
-    longer side would exceed the value specified by `max_size` a new
-    scaling factor is computed so that the longer side matches `max_size`.
-    The shorter side is then smaller than specified by `scale`.
-
-    Args:
-        items (`list` of `str`): Can be "motion_vectors" and/or "frame".
-            Determines whether to scale motion vectors and/or frame inside
-            the sample dict provided during call.
-
-        scale (`int` or `float`): The desired size of the shorter
-            side of the frame after scaling.
-
-        max_size (`int` or `float`): The desired maximum size of the
-            longer side of the frame after scaling.
-
-        return_scale (`bool`): If True return the used scaling factor is
-            inserted in the output sample with key `scaling_factor`.
-
-        scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
-            `det_boxes_prev` if existing by the scaling factor used to scale the
-            motion vectors/frame.
-    """
-    def __init__(self, items=["motion_vectors"], scale=600, max_size=1000, return_scale=False, scale_boxes=True):
-        self.items = items
-        self.scale = scale
-        self.max_size = max_size
-        self.return_scale = return_scale
-        self.scale_boxes = scale_boxes
-
-    def __call__(self, sample):
-        sample_transformed = copy.deepcopy(sample)
-        for item in self.items:
-            image = sample[item].clone()
-            image_resized, scaling_factor = scale_image_(image, self.scale, self.max_size)
-            sample_transformed[item] = image_resized
-        # scale boxes
-        if self.scale_boxes:
-            scale_boxes_(sample, sample_transformed, scaling_factor,
-                ["boxes_prev", "boxes", "det_boxes_prev"])
-        if self.return_scale:
-            sample_transformed["scaling_factor"] = scaling_factor
-        return sample_transformed
-
-    def __repr__(self):
-        repr = ("ScaleImage (\n    items={},\n    scale={},\n    max_size={},\n"
-                "    return_scale={},\n    scale_boxes={}\n)").format(self.items,
-                self.scale, self.max_size, self.return_scale, self.scale_boxes)
-        return repr
-
-
-class RandomScaleImage:
-    """Scale motion vector or frame by a randomly chosen scale.
-
-    Args:
-        items (`list` of `str`): Can be "motion_vectors" and/or "frame".
-            Determines whether to scale motion vectors and/or frame inside
-            the sample dict provided during call.
-
-        scales (`list` of `int` or `list` of `float`): A set of scales one of
-            which is uniformly randomly chosen during each call of this
-            transform.
-
-        max_size (`int` or `float`): The desired maximum size of the
-            longer side of the frame after scaling.
-
-        return_scale (`bool`): If True return the used scaling factor is
-            inserted in the output sample with key `scaling_factor`.
-
-        scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
-            `det_boxes_prev` if existing by the scaling factor used to scale the
-            motion vectors/frame.
-    """
-    def __init__(self, items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=False, scale_boxes=True):
-        self.items = items
-        self.scales = scales
-        self.max_size = max_size
-        self.return_scale = return_scale
-        self.scale_boxes = scale_boxes
-
-    def scale_boxes_(sample, sample_transformed, scaling_factor, box_type):
-        try:
-            boxes = sample[box_type].clone()
-        except KeyError:
-            pass
-        else:
-            boxes[..., 1:] *= scaling_factor
-            sample_transformed[box_type] = boxes
-
-    def __call__(self, sample):
-        sample_transformed = copy.deepcopy(sample)
-        scale = random.choice(self.scales)
-        for item in self.items:
-            image = sample[item].clone()
-            image_resized, scaling_factor = scale_image_(image, scale, self.max_size)
-            sample_transformed[item] = image_resized
-        # scale boxes
-        if self.scale_boxes:
-            scale_boxes_(sample, sample_transformed, scaling_factor,
-                ["boxes_prev", "boxes", "det_boxes_prev"])
-        if self.return_scale:
-            sample_transformed["scaling_factor"] = scaling_factor
-        return sample_transformed
-
-    def __repr__(self):
-        repr = ("RandomScaleImage (\n    items={},\n    scales={},\n    max_size={},\n"
-                "    return_scale={},\n    scale_boxes={}\n)").format(self.items,
-                self.scales, self.max_size, self.return_scale, self.scale_boxes)
-        return repr
+# def scale_image_(image, scale=600, max_size=1000):
+#     # determine the scaling factor
+#     image = image.numpy()
+#     size_min = np.min(image.shape[-3:-1])
+#     size_max = np.max(image.shape[-3:-1])
+#     scaling_factor = float(scale) / float(size_min)
+#     if np.round(scaling_factor * size_max) > max_size:
+#         scaling_factor = float(max_size) / float(size_max)
+#      # scale the frame
+#     if image.ndim == 3:
+#         image_resized = cv2.resize(image, None, None, fx=scaling_factor,
+#             fy=scaling_factor, interpolation=cv2.INTER_LINEAR)
+#     elif image.ndim == 4:
+#         image_resized = []
+#         for batch_idx in range(image.shape[0]):
+#             image_resized.append(cv2.resize(image[batch_idx, ...], None, None,
+#                 fx=scaling_factor, fy=scaling_factor,
+#                 interpolation=cv2.INTER_LINEAR))
+#         image_resized = np.stack(image_resized, axis=0)
+#     else:
+#         raise ValueError("Invalid frame dimension")
+#     image_resized = torch.from_numpy(image_resized)
+#     return image_resized, scaling_factor
+#
+#
+# def scale_boxes_(sample, sample_transformed, scaling_factor, box_types):
+#     # helper to scale multiple boxes only if exist in dictionary
+#     for box_type in box_types:
+#         try:
+#             boxes = sample[box_type].clone()
+#         except KeyError:
+#             pass
+#         else:
+#             boxes[..., 1:] *= scaling_factor
+#             sample_transformed[box_type] = boxes
+#
+#
+# class ScaleImage:
+#     """Scale the motion vectors or frame considering a maximum size.
+#
+#     Frame is scaled so that it's shortest side has the size specified by the
+#     `scale` parameter. The aspect ratio is constant. In case, the
+#     longer side would exceed the value specified by `max_size` a new
+#     scaling factor is computed so that the longer side matches `max_size`.
+#     The shorter side is then smaller than specified by `scale`.
+#
+#     Args:
+#         items (`list` of `str`): Can be "motion_vectors" and/or "frame".
+#             Determines whether to scale motion vectors and/or frame inside
+#             the sample dict provided during call.
+#
+#         scale (`int` or `float`): The desired size of the shorter
+#             side of the frame after scaling.
+#
+#         max_size (`int` or `float`): The desired maximum size of the
+#             longer side of the frame after scaling.
+#
+#         return_scale (`bool`): If True return the used scaling factor is
+#             inserted in the output sample with key `scaling_factor`.
+#
+#         scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
+#             `det_boxes_prev` if existing by the scaling factor used to scale the
+#             motion vectors/frame.
+#     """
+#     def __init__(self, items=["motion_vectors"], scale=600, max_size=1000, return_scale=False, scale_boxes=True):
+#         self.items = items
+#         self.scale = scale
+#         self.max_size = max_size
+#         self.return_scale = return_scale
+#         self.scale_boxes = scale_boxes
+#
+#     def __call__(self, sample):
+#         sample_transformed = copy.deepcopy(sample)
+#         for item in self.items:
+#             image = sample[item].clone()
+#             image_resized, scaling_factor = scale_image_(image, self.scale, self.max_size)
+#             sample_transformed[item] = image_resized
+#         # scale boxes
+#         if self.scale_boxes:
+#             scale_boxes_(sample, sample_transformed, scaling_factor,
+#                 ["boxes_prev", "boxes", "det_boxes_prev"])
+#         if self.return_scale:
+#             sample_transformed["scaling_factor"] = scaling_factor
+#         return sample_transformed
+#
+#     def __repr__(self):
+#         repr = ("ScaleImage (\n    items={},\n    scale={},\n    max_size={},\n"
+#                 "    return_scale={},\n    scale_boxes={}\n)").format(self.items,
+#                 self.scale, self.max_size, self.return_scale, self.scale_boxes)
+#         return repr
+#
+#
+# class RandomScaleImage:
+#     """Scale motion vector or frame by a randomly chosen scale.
+#
+#     Args:
+#         items (`list` of `str`): Can be "motion_vectors" and/or "frame".
+#             Determines whether to scale motion vectors and/or frame inside
+#             the sample dict provided during call.
+#
+#         scales (`list` of `int` or `list` of `float`): A set of scales one of
+#             which is uniformly randomly chosen during each call of this
+#             transform.
+#
+#         max_size (`int` or `float`): The desired maximum size of the
+#             longer side of the frame after scaling.
+#
+#         return_scale (`bool`): If True return the used scaling factor is
+#             inserted in the output sample with key `scaling_factor`.
+#
+#         scale_boxes (`bool`): If True scale `boxes_prev`, `boxes` and
+#             `det_boxes_prev` if existing by the scaling factor used to scale the
+#             motion vectors/frame.
+#     """
+#     def __init__(self, items=["motion_vectors"], scales=[300, 400, 500, 600], max_size=1000, return_scale=False, scale_boxes=True):
+#         self.items = items
+#         self.scales = scales
+#         self.max_size = max_size
+#         self.return_scale = return_scale
+#         self.scale_boxes = scale_boxes
+#
+#     def scale_boxes_(sample, sample_transformed, scaling_factor, box_type):
+#         try:
+#             boxes = sample[box_type].clone()
+#         except KeyError:
+#             pass
+#         else:
+#             boxes[..., 1:] *= scaling_factor
+#             sample_transformed[box_type] = boxes
+#
+#     def __call__(self, sample):
+#         sample_transformed = copy.deepcopy(sample)
+#         scale = random.choice(self.scales)
+#         for item in self.items:
+#             image = sample[item].clone()
+#             image_resized, scaling_factor = scale_image_(image, scale, self.max_size)
+#             sample_transformed[item] = image_resized
+#         # scale boxes
+#         if self.scale_boxes:
+#             scale_boxes_(sample, sample_transformed, scaling_factor,
+#                 ["boxes_prev", "boxes", "det_boxes_prev"])
+#         if self.return_scale:
+#             sample_transformed["scaling_factor"] = scaling_factor
+#         return sample_transformed
+#
+#     def __repr__(self):
+#         repr = ("RandomScaleImage (\n    items={},\n    scales={},\n    max_size={},\n"
+#                 "    return_scale={},\n    scale_boxes={}\n)").format(self.items,
+#                 self.scales, self.max_size, self.return_scale, self.scale_boxes)
+#         return repr
 
 
 def flip_motion_vectors_(motion_vectors, direction):
@@ -290,7 +295,6 @@ def flip_velocities_(velocities, direction):
 
 
 def flip_(sample, sample_transformed, direction):
-    motion_vectors = sample["motion_vectors"].clone().numpy()
     velocities = sample["velocities"].clone()
     try:
         boxes_prev = sample["boxes_prev"].clone()
@@ -305,10 +309,23 @@ def flip_(sample, sample_transformed, direction):
     except KeyError:
         det_boxes_prev = None
     # mvs have shape (H, W, C) or (B, H, W, C)
-    image_width = motion_vectors.shape[-2]
-    image_height = motion_vectors.shape[-3]
-    if motion_vectors.ndim == 3:
-        motion_vectors = flip_motion_vectors_(motion_vectors, direction)
+    image_width = sample["motion_vectors"][0].shape[-2]
+    image_height = sample["motion_vectors"][0].shape[-3]
+    # flip motion vectors
+    for i in range(len(sample["motion_vectors"])):
+        motion_vectors = sample["motion_vectors"][i].clone().numpy()
+        if motion_vectors.ndim == 3:
+            motion_vectors = flip_motion_vectors_(motion_vectors, direction)
+        elif motion_vectors.ndim == 4:
+            motion_vectors_flipped = []
+            for batch_idx in range(motion_vectors.shape[0]):
+                motion_vectors_flipped.append(flip_motion_vectors_(
+                    motion_vectors[batch_idx, ...], direction))
+            motion_vectors = np.stack(motion_vectors_flipped, axis=0)
+        motion_vectors = torch.from_numpy(motion_vectors)
+        sample_transformed["motion_vectors"][i] = motion_vectors
+    # flip other items in the sample
+    if sample["motion_vectors"][0].ndim == 3:
         if boxes_prev is not None:
             boxes_prev[:, 1:] = flip_boxes_(boxes_prev[:, 1:], direction,
                 image_width, image_height)
@@ -319,11 +336,8 @@ def flip_(sample, sample_transformed, direction):
             det_boxes_prev[:, 1:] = flip_boxes_(det_boxes_prev[:, 1:],
                 direction, image_width, image_height)
         velocities = flip_velocities_(velocities, direction)
-    elif motion_vectors.ndim == 4:
-        motion_vectors_flipped = []
-        for batch_idx in range(motion_vectors.shape[0]):
-            motion_vectors_flipped.append(flip_motion_vectors_(
-                motion_vectors[batch_idx, ...], direction))
+    elif sample["motion_vectors"][0].ndim == 4:
+        for batch_idx in range(sample["motion_vectors"][0].shape[0]):
             if boxes_prev is not None:
                 boxes_prev[batch_idx, :, 1:] = flip_boxes_(
                     boxes_prev[batch_idx, :, 1:], direction, image_width,
@@ -338,12 +352,8 @@ def flip_(sample, sample_transformed, direction):
                     image_height)
             velocities[batch_idx, ...] = flip_velocities_(
                 velocities[batch_idx, ...], direction)
-        motion_vectors = np.stack(motion_vectors_flipped, axis=0)
     else:
         raise ValueError("Invalid dimension of motion vectors")
-    motion_vectors = torch.from_numpy(motion_vectors)
-    # pack into output dict
-    sample_transformed["motion_vectors"] = motion_vectors
     sample_transformed["velocities"] = velocities
     if boxes_prev is not None:
         sample_transformed["boxes_prev"] = boxes_prev
@@ -427,17 +437,18 @@ class RandomMotionChange:
 
     def __call__(self, sample):
         sample_transformed = copy.deepcopy(sample)
-        # sample statistics from motion vectors
-        mean_x = torch.mean(sample_transformed["motion_vectors"][..., 2])
-        std_x = torch.std(sample_transformed["motion_vectors"][..., 2])
-        mean_y = torch.mean(sample_transformed["motion_vectors"][..., 1])
-        std_y = torch.std(sample_transformed["motion_vectors"][..., 1])
+        # sample statistics from P vectors
+        mean_x = torch.mean(sample_transformed["motion_vectors"][0][..., 2])
+        std_x = torch.std(sample_transformed["motion_vectors"][0][..., 2])
+        mean_y = torch.mean(sample_transformed["motion_vectors"][0][..., 1])
+        std_y = torch.std(sample_transformed["motion_vectors"][0][..., 1])
         # choose a random color change from a scaled version of that distribution
         x_rand = float(np.random.normal(loc=mean_x, scale=std_x*self.scale))
         y_rand = float(np.random.normal(loc=mean_y, scale=std_y*self.scale))
         # apply color change to cx and y channel
-        sample_transformed["motion_vectors"][..., 2] += x_rand
-        sample_transformed["motion_vectors"][..., 1] += y_rand
+        for i in range(len(sample_transformed["motion_vectors"])):
+            sample_transformed["motion_vectors"][i][..., 2] += x_rand
+            sample_transformed["motion_vectors"][i][..., 1] += y_rand
         return sample_transformed
 
     def __repr__(self):
