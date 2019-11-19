@@ -13,8 +13,7 @@ from detector import DetectorTF
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
-from lib.dataset.stats import StatsMpeg4UpsampledStatic, \
-    StatsMpeg4UpsampledFull, StatsMpeg4DenseStaticSinglescale, \
+from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale, \
     StatsMpeg4DenseFullSinglescale, StatsMpeg4UpsampledStaticSinglescale, \
     StatsMpeg4UpsampledFullSinglescale, StatsH264UpsampledStaticSinglescale,\
     StatsH264UpsampledFullSinglescale, StatsH264DenseStaticSinglescale, \
@@ -24,7 +23,7 @@ from lib.dataset.stats import StatsMpeg4UpsampledStatic, \
 if __name__ == "__main__":
 
     scaling_factor = 1.0
-    codec = "h264"
+    codec = "mpeg4"
 
     # reminder: when evaluating h264 models, use h264 videos
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, static cam
@@ -43,17 +42,10 @@ if __name__ == "__main__":
         use_only_p_vectors=False)
     # tracker_deep = MotionVectorTrackerDeep(
     #     iou_threshold=tracker_iou_thres,
-    #     weights_file="models/tracker/2019-10-23_09-25-34/model_final.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
+    #     weights_file="models/tracker/2019-10-30_02-47-42/model_highest_iou.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
     #     mvs_mode="upsampled",
     #     codec=codec,
-    #     stats=StatsMpeg4UpsampledFull,
-    #     device=torch.device("cuda:0"))
-    # tracker_deep = MotionVectorTrackerDeep(
-    #     iou_threshold=tracker_iou_thres,
-    #     weights_file="models/tracker/2019-10-23_09-25-34/model_final.pth", #2019-10-30_02-47-42/model_highest_iou.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
-    #     mvs_mode="upsampled",
-    #     codec=codec,
-    #     stats=StatsMpeg4UpsampledFullSinglescale, #StatsMpeg4UpsampledStaticSinglescale,
+    #     stats=StatsMpeg4UpsampledFullSinglescale,
     #     device=torch.device("cuda:0"))
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,

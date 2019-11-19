@@ -1,3 +1,5 @@
+import time
+import pickle
 import uuid
 from collections import OrderedDict
 
@@ -5,7 +7,6 @@ import torch
 import torchvision
 import numpy as np
 import cv2
-import pickle
 
 import sys
 sys.path.append("..")
@@ -53,6 +54,9 @@ class MotionVectorTracker:
 
         self.model = load_pretrained_weights(self.model, weights_file)
         self.model.eval()
+
+        # for timing analaysis
+        self.last_inference_dt = 0
 
 
     def update(self, motion_vectors, frame_type, detection_boxes, frame_shape):
@@ -132,19 +136,19 @@ class MotionVectorTracker:
         boxes_prev = boxes_prev_tmp
         boxes_prev = boxes_prev.unsqueeze(0)  # add batch dimension
 
+        boxes_prev_ = boxes_prev.clone()
+        if self.mvs_mode == "dense":
+            boxes_prev_[:, 1:] = boxes_prev_[:, 1:] / 16.0
+
+        boxes_prev_ = boxes_prev_.to(self.device)
+        self.last_motion_vectors = self.last_motion_vectors.to(self.device)
+
         # feed into model, retrieve output
         with torch.set_grad_enabled(False):
-            if self.mvs_mode == "upsampled":
-                velocities_pred = self.model(
-                    self.last_motion_vectors.to(self.device),
-                    boxes_prev.to(self.device),
-                    None)
-            elif self.mvs_mode == "dense":
-                boxes_prev_ = boxes_prev.clone()
-                boxes_prev_[:, 1:] = boxes_prev_[:, 1:] / 16.0
-                velocities_pred = self.model(
-                    self.last_motion_vectors.to(self.device),
-                    boxes_prev_.to(self.device))
+            t_start_inference = time.process_time()
+            velocities_pred = self.model(self.last_motion_vectors,
+                boxes_prev_)
+            self.last_inference_dt = time.process_time() - t_start_inference
 
             # make sure output is on CPU
             velocities_pred = velocities_pred.cpu()

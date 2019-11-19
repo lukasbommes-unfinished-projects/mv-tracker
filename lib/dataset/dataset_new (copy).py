@@ -261,12 +261,9 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                 motion_vectors.shape, frame.shape, self.scales[scale_idx]))
 
         # convert motion vectors to image (for I frame black image is returned)
-        if self.vector_type == "p":
-            motion_vectors = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
+        motion_vectors = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
         motion_vectors = normalize_vectors(motion_vectors)
-
-        if self.visu:
-            motion_vectors_for_visu = np.copy(get_nonzero_vectors(motion_vectors))
+        motion_vectors_for_visu = np.copy(get_nonzero_vectors(motion_vectors))
 
         if self.mvs_mode == "upsampled":
             motion_vectors = get_nonzero_vectors(motion_vectors)
@@ -355,7 +352,6 @@ if __name__ == "__main__":
     batch_size = 1
     codec = "mpeg4"
     mvs_mode = "dense"
-    vector_type = "p"
     static_only = False
     exclude_keyframes = True
     scales = [1.0]
@@ -374,9 +370,9 @@ if __name__ == "__main__":
     }
 
     datasets = {x: MotionVectorDataset(root_dir='data', transforms=transforms[x],
-        codec=codec, scales=scales, mvs_mode=mvs_mode, vector_type=vector_type,
-        static_only=static_only, exclude_keyframes=exclude_keyframes, visu=True,
-        debug=True, mode=x) for x in ["train", "val"]}
+        codec=codec, scales=scales, mvs_mode=mvs_mode, static_only=static_only,
+        exclude_keyframes=exclude_keyframes, visu=True, debug=True,
+        mode=x) for x in ["train", "val"]}
 
     print("Dataset stats:")
     for mode, dataset in datasets.items():

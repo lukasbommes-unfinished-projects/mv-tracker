@@ -141,9 +141,11 @@ if __name__ == "__main__":
         "mean_dt_predict": [],
         "mean_dt_update": [],
         "mean_dt_total": [],
+        "mean_dt_inference": [],
         "mean_fps_predict": [],
         "mean_fps_update": [],
-        "mean_fps_total": []
+        "mean_fps_total": [],
+        "mean_fps_inference": []
     }
 
     for repetition in range(args.repeats):
@@ -158,12 +160,14 @@ if __name__ == "__main__":
             dts[sequence_name] = {
                 "update": [],
                 "predict": [],
-                "total": []
+                "total": [],
+                "inference": []
             }
             dts["accumulated"] = {
                 "update": [],
                 "predict": [],
-                "total": []
+                "total": [],
+                "inference": []
             }
 
             print("Loading annotation data from", data_dir)
@@ -247,6 +251,7 @@ if __name__ == "__main__":
                             tracker.predict(motion_vectors, frame_type)
                         elif args.tracker_type == "deep":
                             tracker.predict(motion_vectors, frame_type, frame.shape)
+                            dts[sequence_name]["inference"].append(tracker.last_inference_dt)
                         dts[sequence_name]["predict"].append(time.process_time() - t_start_predict)
 
                     dts[sequence_name]["total"].append(time.process_time() - t_start_total)
@@ -267,6 +272,7 @@ if __name__ == "__main__":
             dts["accumulated"]["update"].extend(dts[sequence_name]["update"])
             dts["accumulated"]["predict"].extend(dts[sequence_name]["predict"])
             dts["accumulated"]["total"].extend(dts[sequence_name]["total"])
+            dts["accumulated"]["inference"].extend(dts[sequence_name]["inference"])
 
             cap.release()
             pbar.close()
@@ -274,56 +280,71 @@ if __name__ == "__main__":
         # write timing output file for current repitition
         with open(os.path.join(output_directory, 'time_perf.log'), mode="a") as csvfile:
             csv_writer = csv.writer(csvfile, delimiter=',')
-            csv_writer.writerow(["Repetition {}".format(repetition),'','','','','',''])
+            csv_writer.writerow(["Repetition {}".format(repetition),'','','','','','','',''])
             csv_writer.writerow(["sequence", "predict mean dt", "predict std dt",
-                "update mean dt", "update std dt", "total mean dt", "total std dt"])
+                "update mean dt", "update std dt", "total mean dt", "total std dt",
+                "inference mean dt", "inference std dt"])
             for sequence_name, subdict in dts.items():
                 if sequence_name != "accumulated":
                     csv_writer.writerow([sequence_name, np.mean(subdict["predict"]),
                         np.std(subdict["predict"]), np.mean(subdict["update"]),
                         np.std(subdict["update"]), np.mean(subdict["total"]),
-                        np.std(subdict["total"])])
+                        np.std(subdict["total"]), np.mean(subdict["inference"]),
+                        np.std(subdict["inference"])])
 
             # compute average over entire dataset
-            csv_writer.writerow(["Averages for this repetition:",'','','','','',''])
+            csv_writer.writerow(["Averages for this repetition:",'','','','','','','',''])
             csv_writer.writerow(["predict mean dt", "predict std dt", "update mean dt",
-                "update std dt", "total mean dt", "total std dt", ""])
+                "update std dt", "total mean dt", "total std dt", "inference mean dt",
+                "inference std dt", ""])
             csv_writer.writerow([np.mean(dts["accumulated"]["predict"]),
                 np.std(dts["accumulated"]["predict"]),
                 np.mean(dts["accumulated"]["update"]),
                 np.std(dts["accumulated"]["update"]),
                 np.mean(dts["accumulated"]["total"]),
-                np.std(dts["accumulated"]["total"]), ""])
-            csv_writer.writerow(["predict mean fps",'update mean fps','total mean fps','','','',''])
+                np.std(dts["accumulated"]["total"]),
+                np.mean(dts["accumulated"]["inference"]),
+                np.std(dts["accumulated"]["inference"]), ""])
+            csv_writer.writerow(["predict mean fps",'update mean fps','total mean fps',
+                'inference mean fps','','','','',''])
             csv_writer.writerow([1/np.mean(dts["accumulated"]["predict"]),
                 1/np.mean(dts["accumulated"]["update"]),
-                1/np.mean(dts["accumulated"]["total"]),'','','',''])
-            csv_writer.writerow(["####################################################################################################################################",'','','','','',''])
+                1/np.mean(dts["accumulated"]["total"]),
+                1/np.mean(dts["accumulated"]["inference"]),'','','','',''])
+            csv_writer.writerow(["####################################################################################################################################",'','','','','','','',''])
 
             overall_stats["mean_dt_predict"].append(np.mean(dts["accumulated"]["predict"]))
             overall_stats["mean_dt_update"].append(np.mean(dts["accumulated"]["update"]))
             overall_stats["mean_dt_total"].append(np.mean(dts["accumulated"]["total"]))
+            overall_stats["mean_dt_inference"].append(np.mean(dts["accumulated"]["inference"]))
             overall_stats["mean_fps_predict"].append(1/np.mean(dts["accumulated"]["predict"]))
             overall_stats["mean_fps_update"].append(1/np.mean(dts["accumulated"]["update"]))
             overall_stats["mean_fps_total"].append(1/np.mean(dts["accumulated"]["total"]))
+            overall_stats["mean_fps_inference"].append(1/np.mean(dts["accumulated"]["inference"]))
 
     # write overall timing stats
     with open(os.path.join(output_directory, 'time_perf.log'), mode="a") as csvfile:
         csv_writer = csv.writer(csvfile, delimiter=',')
-        csv_writer.writerow(["Overall statistics:",'','','','','',''])
+        csv_writer.writerow(["Overall statistics:",'','','','','','','',''])
         csv_writer.writerow(["predict mean of mean dt", "predict std of mean dt",
-            "update mean of mean dt", "update std of mean dt", "total mean of mean dt", "total std of mean dt",""])
+            "update mean of mean dt", "update std of mean dt", "total mean of mean dt",
+            "total std of mean dt", "inference mean of mean dt", "inference std of mean dt", ""])
         csv_writer.writerow([np.mean(overall_stats["mean_dt_predict"]),
             np.std(overall_stats["mean_dt_predict"]),
             np.mean(overall_stats["mean_dt_update"]),
             np.std(overall_stats["mean_dt_update"]),
             np.mean(overall_stats["mean_dt_total"]),
-            np.std(overall_stats["mean_dt_total"])])
+            np.std(overall_stats["mean_dt_total"]),
+            np.mean(overall_stats["mean_dt_inference"]),
+            np.std(overall_stats["mean_dt_inference"]), ""])
         csv_writer.writerow(["predict mean of mean fps", "predict std of mean fps",
-            "update mean of mean fps", "update std of mean fps", "total mean of mean fps", "total std of mean fps",""])
+            "update mean of mean fps", "update std of mean fps", "total mean of mean fps",
+            "total std of mean fps", "inference mean of mean fps", "inference std of mean fps", ""])
         csv_writer.writerow([np.mean(overall_stats["mean_fps_predict"]),
             np.std(overall_stats["mean_fps_predict"]),
             np.mean(overall_stats["mean_fps_update"]),
             np.std(overall_stats["mean_fps_update"]),
             np.mean(overall_stats["mean_fps_total"]),
-            np.std(overall_stats["mean_fps_total"])])
+            np.std(overall_stats["mean_fps_total"]),
+            np.mean(overall_stats["mean_fps_inference"]),
+            np.std(overall_stats["mean_fps_inference"]), ""])
