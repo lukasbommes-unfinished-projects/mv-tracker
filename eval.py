@@ -54,7 +54,7 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
     parser.add_argument('--scale', type=float, help='Scaling factor for the input sequence relative to the original sequence, e.g. if original sequence is 1920 x 1080, but was reencoded to 960 x 540 then scale is 0.5.', default=1.0)
     parser.add_argument('--codec', type=str, help='Either "mpeg4" or "h264" determines the encoding type of the video.', default='mpeg4')
     parser.add_argument('--mvs_mode', type=str, help='Either "upsampled" or "dense". Only for deep tracker. Determines whether upsampled or compact motion vector image is used as input.', default='mpeg4')
-    parser.add_argument('--vector_type', type=str, help='Either "p" to use only p vectors or "pb" to use both p and b vectors ("pb" is only valid if codec is h264).', default='p')
+    parser.add_argument('--vector_type', type=str, help='Either "p" to use only p vectors or "p+b" to use both p and b vectors ("p+b" is only valid if codec is h264).', default='p')
     parser.add_argument('--tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
     parser.add_argument('--tracker_iou_thres', type=float, help='The minimum IoU needed to match a tracked boy with a detected box during data assocation step.', default=0.1)
     parser.add_argument('--detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
@@ -209,6 +209,7 @@ if __name__ == "__main__":
                     iou_threshold=args.tracker_iou_thres,
                     weights_file=args.deep_tracker_weights_file,
                     mvs_mode=args.mvs_mode,
+                    vector_type=args.vector_type,
                     codec=args.codec,
                     stats=stats,
                     device=device)
@@ -242,7 +243,6 @@ if __name__ == "__main__":
                         elif args.tracker_type == "deep":
                             tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale, frame.shape)
                         dts[sequence_name]["update"].append(time.process_time() - t_start_update)
-
 
                     # prediction by tracker
                     else:

@@ -246,13 +246,7 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                     self.index.append((sequence_idx, scale_idx, frame_idx))
 
 
-    def __len__(self):
-        """Return the total length of the dataset."""
-        total_len = len(self.index)
-        return total_len
-
-
-    def preprocess_motion_vectors(self, motion_vectors, frame_shape):
+    def preprocess_motion_vectors_(self, motion_vectors, frame_shape):
         """Preprocesses motion vectors depending on the codec, vector type and mvs_mode."""
         motion_vectors_list = []
         motion_vectors = normalize_vectors(motion_vectors)
@@ -277,6 +271,12 @@ class MotionVectorDataset(torch.utils.data.Dataset):
         return motion_vectors_list, motion_vectors_for_visu
 
 
+    def __len__(self):
+        """Return the total length of the dataset."""
+        total_len = len(self.index)
+        return total_len
+
+
     def __getitem__(self, idx):
         """Retrieve item with index `idx` from the dataset."""
         sequence_idx, scale_idx, frame_idx = self.index[idx]
@@ -288,7 +288,7 @@ class MotionVectorDataset(torch.utils.data.Dataset):
                 "frame shape: {}, scale: {}").format(frame_idx + 1, frame_type,
                 motion_vectors.shape, frame.shape, self.scales[scale_idx]))
 
-        motion_vectors, motion_vectors_for_visu = self.preprocess_motion_vectors(motion_vectors, (frame.shape[1], frame.shape[0]))
+        motion_vectors, motion_vectors_for_visu = self.preprocess_motion_vectors_(motion_vectors, (frame.shape[1], frame.shape[0]))
 
         if self.visu:
             frame = draw_motion_vectors(frame, motion_vectors_for_visu, format='numpy')

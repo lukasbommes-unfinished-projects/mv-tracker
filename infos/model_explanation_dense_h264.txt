@@ -1,4 +1,9 @@
-python train_new.py --codec=h264 --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1 --intial_weights_file=models/tracker/.../model_highest_iou.pth
+
+2019-11-19_06-52-52 uses model 2019-11-06_04-04-14 with "p+b" vector_type
+trained via cmd: python train.py --static_only --codec=h264 --vector_type="p+b" --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance:
+
+###
 
 2019-11-12_03-42-43 Uses model 2019-11-12_01-24-35
 trained via cmd: python train_new.py --static_only --codec=h264 --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=1

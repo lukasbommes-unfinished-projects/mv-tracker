@@ -71,8 +71,9 @@ class StandardizeMotionVectors:
         return sample_transformed
 
     def __repr__(self):
-        repr = "StandardizeMotionVectors (\n    mean={},\n    std={}\n)".format(
-            [float(val) for val in self.mean], [float(val) for val in self.std])
+        repr = "StandardizeMotionVectors (\n    mean_p={},\n    std_p={},\n    mean_b={},\n    std_b={}\n)".format(
+            [float(val) for val in self.mean[0]], [float(val) for val in self.std[0]],
+            [float(val) for val in self.mean[1]], [float(val) for val in self.std[1]])
         return repr
 
 

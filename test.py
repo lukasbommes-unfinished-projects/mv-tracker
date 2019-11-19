@@ -23,7 +23,7 @@ from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale, \
 if __name__ == "__main__":
 
     scaling_factor = 1.0
-    codec = "mpeg4"
+    codec = "h264"
 
     # reminder: when evaluating h264 models, use h264 videos
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, static cam
@@ -44,13 +44,15 @@ if __name__ == "__main__":
     #     iou_threshold=tracker_iou_thres,
     #     weights_file="models/tracker/2019-10-30_02-47-42/model_highest_iou.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
     #     mvs_mode="upsampled",
+    #     vector_type="p",
     #     codec=codec,
     #     stats=StatsMpeg4UpsampledFullSinglescale,
     #     device=torch.device("cuda:0"))
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-11-12_05-17-34/model_highest_iou.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
+        weights_file="models/tracker/2019-11-19_06-52-52/model_highest_iou.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
         mvs_mode="dense",
+        vector_type="p+b",
         codec=codec,
         stats=StatsH264DenseFullSinglescale,
         device=torch.device("cuda:0"))

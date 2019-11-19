@@ -5,8 +5,7 @@ import torch.utils.model_zoo as model_zoo
 import torchvision
 
 from lib.resnet_atrous import resnet18
-from lib.utils import load_pretrained_weights_to_modified_resnet, \
-    change_box_format
+from lib.utils import load_pretrained_weights_to_modified_resnet
 
 
 class PropagationNetwork(nn.Module):
@@ -49,13 +48,20 @@ class PropagationNetwork(nn.Module):
         self.conv1x1 = nn.Conv2d(512, 4*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
         self.pooling = nn.AvgPool2d(kernel_size=self.POOLING_SIZE, stride=self.POOLING_SIZE)
 
+        print([p.requires_grad for p in self.parameters()])
+        print(list(self.children()))
 
-    def forward(self, motion_vectors, boxes_prev):
+
+    def forward(self, motion_vectors, boxes_prev, num_boxes_mask):
         x = self.base(motion_vectors)
         x = self.conv1x1(x)
 
-        boxes_prev = boxes_prev.view(-1, 5)
-        boxes_prev_ = change_box_format(boxes_prev)
+        boxes_prev_ = boxes_prev.detach().clone()
+        if num_boxes_mask is not None:
+            boxes_prev_ = boxes_prev_[num_boxes_mask]
+        boxes_prev_ = boxes_prev_.view(-1, 5)
+        boxes_prev_ = self._change_box_format(boxes_prev_)
+        boxes_prev_ = self._frame_idx_to_batch_idx(boxes_prev_)
 
         # compute ratio of input size to size of base output
         x = torchvision.ops.ps_roi_pool(x, boxes_prev_, output_size=(self.POOLING_SIZE, self.POOLING_SIZE), spatial_scale=1/16)
@@ -64,6 +70,24 @@ class PropagationNetwork(nn.Module):
         velocities_pred = x.view(-1, 4)
         return velocities_pred
 
+
+    def _frame_idx_to_batch_idx(self, boxes):
+        """Converts unique frame_idx in first column of boxes into batch index."""
+        frame_idxs = torch.unique(boxes[:, 0])
+        for batch_idx, frame_idx in enumerate(frame_idxs):
+            idx = torch.where(boxes == frame_idx)[0]
+            boxes[idx, 0] = batch_idx
+        return boxes
+
+
+    def _change_box_format(self, boxes):
+        """Change format of boxes from [idx, x, y, w, h] to [idx, x1, y1, x2, y2]."""
+        boxes[..., 0] = boxes[..., 0]
+        boxes[..., 1] = boxes[..., 1]
+        boxes[..., 2] = boxes[..., 2]
+        boxes[..., 3] = boxes[..., 1] + boxes[..., 3]
+        boxes[..., 4] = boxes[..., 2] + boxes[..., 4]
+        return boxes
 
     # names of layer weights (excludes batch norm layers, etc.), needed for weight logging
     layer_keys = [

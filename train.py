@@ -17,7 +17,7 @@ import torchvision
 from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsH264DenseFullSinglescale as Stats
+from lib.dataset.stats import StatsH264UpsampledFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
 from lib.losses.losses import IouLoss
@@ -40,16 +40,14 @@ def log_weights(model, epoch, writer):
         writer.add_histogram(key, weights, global_step=epoch, bins='tensorflow')
 
 
-def train(model, optimizer, loss_type, mvs_mode, scheduler, batch_size, num_epochs,
-    write_tensorboard_log, save_model, save_model_every_epoch, outdir, logger):
+def train(model, optimizer, mvs_mode, vector_type, scheduler, batch_size,
+    num_epochs, write_tensorboard_log, save_model, save_model_every_epoch,
+    outdir, logger):
     tstart = time.time()
     if write_tensorboard_log:
         writer = SummaryWriter()
 
-    #if loss_type == "loss_velocities" or loss_type == "loss_multitask":
     criterion_velocity = nn.SmoothL1Loss(reduction='mean')
-    #if loss_type == "loss_iou" or loss_type == "":
-    #    criterion_iou = IouLoss()
 
     if mvs_mode == "upsampled":
         velocity_dim = 4
@@ -87,13 +85,20 @@ def train(model, optimizer, loss_type, mvs_mode, scheduler, batch_size, num_epoc
             pbar = tqdm(total=len(dataloaders[phase]))
             for step, sample in enumerate(dataloaders[phase]):
 
-                motion_vectors = sample["motion_vectors"]
+                motion_vectors_p = sample["motion_vectors"][0]
+                motion_vectors_p = motion_vectors_p.to(device)
+                try:
+                    motion_vectors_b = sample["motion_vectors"][1]
+                except IndexError:
+                    motion_vectors_b = None
+                else:
+                    motion_vectors_b = motion_vectors_b.to(device)
+
                 boxes_prev = sample["boxes_prev"]
                 boxes = sample["boxes"]
                 velocities = sample["velocities"]
 
                 # move to GPU
-                motion_vectors = motion_vectors.to(device)
                 boxes_prev = boxes_prev.to(device)
                 boxes = boxes.to(device)
                 velocities = velocities.to(device)
@@ -104,30 +109,8 @@ def train(model, optimizer, loss_type, mvs_mode, scheduler, batch_size, num_epoc
                     boxes = boxes.view(-1, 5)
                     velocities = velocities.view(-1, velocity_dim)
 
-                    velocities_pred = model(motion_vectors, boxes_prev)
-
-                    # compute velocities loss
-                    #if loss_type == "loss_velocities" or loss_type == "loss_multitask":
-                    #loss_velocities = criterion_velocity(velocities_pred, velocities)
+                    velocities_pred = model(motion_vectors_p, motion_vectors_b, boxes_prev)
                     loss = criterion_velocity(velocities_pred, velocities)
-
-                    # undo normalization (do that here because mean IoU logging below also needs unnormalized velocities)
-                    #velocities_mean = torch.tensor(Stats.velocities["mean"]).to(device)
-                    #velocities_std = torch.tensor(Stats.velocities["std"]).to(device)
-                    #velocities_pred = velocities_pred * velocities_std + velocities_mean
-                    #boxes_pred = box_from_velocities(boxes_prev[:, 1:], velocities_pred)
-
-                    # compute box IoU loss
-                    #if loss_type == "loss_iou" or loss_type == "loss_multitask":
-                    #    loss_iou = criterion_iou(boxes_pred, boxes[:, 1:])
-
-                    #if loss_type == "loss_multitask":
-                    #    loss = loss_velocities + loss_iou
-                    #    loss_ratio = loss_velocities.item() / loss_iou.item()  # log loss ratio
-                    #elif loss_type == "loss_velocities":
-                    #    loss = loss_velocities
-                    #elif loss_type == "loss_iou":
-                    #    loss = loss_iou
 
                     if phase == "train":
                         if write_tensorboard_log:
@@ -170,8 +153,6 @@ def train(model, optimizer, loss_type, mvs_mode, scheduler, batch_size, num_epoc
                     if write_tensorboard_log:
                         writer.add_scalar('Loss/{}'.format(phase), loss.item(), iterations[phase])
                         writer.add_scalar('Mean IoU/{}'.format(phase), mean_iou, iterations[phase])
-                        #if loss_type == "multi-task":
-                        #    writer.add_scalar('Loss Ratio/{}'.format(phase), loss_ratio, iterations[phase])
 
                     iterations[phase] += 1
 
@@ -228,8 +209,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     # dataset params
     parser.add_argument('--root_dir', type=str, default="data")
-    parser.add_argument('--codec', type=str, default="mpeg4")
-    parser.add_argument('--mvs_mode', type=str, default="dense")
+    parser.add_argument('--codec', type=str, default="mpeg4")  # "h264" or "mpeg4"
+    parser.add_argument('--mvs_mode', type=str, default="dense")  # "dense" or "upsampled"
+    parser.add_argument('--vector_type', type=str, default="p")  # "p" or "p+b"
     parser.add_argument('--scales', nargs='+', type=float, default=1.0)
     parser.add_argument('--static_only', dest='static_only', action='store_true')
     parser.set_defaults(static_only=False)
@@ -242,7 +224,6 @@ def parse_args():
     parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--num_epochs', type=int, default=100)
     parser.add_argument('--weight_decay', type=float, default=0.0001)
-    parser.add_argument('--loss_type', type=str, default="loss_velocities")
     parser.add_argument('--scheduler_frequency', type=int, default=20)
     parser.add_argument('--scheduler_factor', type=float, default=0.1)
     parser.add_argument('--gpu', type=int, default=0)
@@ -287,6 +268,7 @@ if __name__ == "__main__":
     logger.info(f"root_dir: {args.root_dir}")
     logger.info(f"codec: {args.codec}")
     logger.info(f"mvs_mode: {args.mvs_mode}")
+    logger.info(f"vector_type: {args.vector_type}")
     logger.info(f"scales: {args.scales}")
     logger.info(f"static_only: {args.static_only}")
     logger.info(f"with_keyframes: {args.with_keyframes}")
@@ -295,7 +277,6 @@ if __name__ == "__main__":
     logger.info(f"learning_rate: {args.learning_rate}")
     logger.info(f"num_epochs: {args.num_epochs}")
     logger.info(f"weight_decay: {args.weight_decay}")
-    logger.info(f"loss_type: {args.loss_type}")
     logger.info(f"scheduler_frequency: {args.scheduler_frequency}")
     logger.info(f"scheduler_factor: {args.scheduler_factor}")
     logger.info(f"gpu: {args.gpu}")
@@ -315,7 +296,8 @@ if __name__ == "__main__":
 
     modes = ["train", "val"]
     datasets = {x: MotionVectorDataset(root_dir=args.root_dir, transforms=transforms[x],
-        codec=args.codec, scales=args.scales, mvs_mode=args.mvs_mode, static_only=args.static_only,
+        codec=args.codec, scales=args.scales, mvs_mode=args.mvs_mode,
+        vector_type=args.vector_type, static_only=args.static_only,
         exclude_keyframes=(not args.with_keyframes), visu=False, debug=False,
         mode=x) for x in modes}
 
@@ -325,9 +307,9 @@ if __name__ == "__main__":
     device = torch.device("cuda:{}".format(args.gpu) if torch.cuda.is_available() else "cpu")
 
     if args.mvs_mode == "upsampled":
-        model = PropagationNetworkUpsampled()
+        model = PropagationNetworkUpsampled(vector_type=args.vector_type)
     elif args.mvs_mode =="dense":
-        model = PropagationNetworkDense()
+        model = PropagationNetworkDense(vector_type=args.vector_type)
 
     if args.intial_weights_file:
         model = load_pretrained_weights(model, args.intial_weights_file)
@@ -345,7 +327,8 @@ if __name__ == "__main__":
     logger.info(f"optimizer: {optimizer}")
     logger.info(f"transforms: {transforms['train']}")
 
-    train(model, optimizer, loss_type=args.loss_type, mvs_mode=args.mvs_mode, scheduler=scheduler, batch_size=args.batch_size,
-        num_epochs=args.num_epochs, write_tensorboard_log=write_tensorboard_log,
-        save_model=save_model, save_model_every_epoch=save_model_every_epoch,
-        outdir=outdir, logger=logger)
+    train(model, optimizer, mvs_mode=args.mvs_mode, vector_type=args.vector_type,
+        scheduler=scheduler, batch_size=args.batch_size, num_epochs=args.num_epochs,
+        write_tensorboard_log=write_tensorboard_log, save_model=save_model,
+        save_model_every_epoch=save_model_every_epoch, outdir=outdir,
+        logger=logger)

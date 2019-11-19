@@ -24,9 +24,11 @@ from lib.utils import load_pretrained_weights
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, weights_file, mvs_mode, codec, stats, device=None):
+    def __init__(self, iou_threshold, weights_file, mvs_mode, vector_type,
+        codec, stats, device=None):
         self.iou_threshold = iou_threshold
         self.mvs_mode = mvs_mode
+        self.vector_type = vector_type
         self.codec = codec
         if device is None:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -47,9 +49,9 @@ class MotionVectorTracker:
 
         # load model and weigths
         if self.mvs_mode == "upsampled":
-            self.model = PropagationNetworkUpsampled()
+            self.model = PropagationNetworkUpsampled(vector_type=self.vector_type)
         elif self.mvs_mode == "dense":
-            self.model = PropagationNetworkDense()
+            self.model = PropagationNetworkDense(vector_type=self.vector_type)
         self.model = self.model.to(self.device)
 
         self.model = load_pretrained_weights(self.model, weights_file)
@@ -57,6 +59,30 @@ class MotionVectorTracker:
 
         # for timing analaysis
         self.last_inference_dt = 0
+
+
+    def preprocess_motion_vectors_(self, motion_vectors, frame_shape):
+        """Preprocesses motion vectors depending on the codec, vector type and mvs_mode."""
+        motion_vectors_list = []
+        motion_vectors = normalize_vectors(motion_vectors)
+        if self.vector_type == "p+b":
+            sources = ["past", "future"]
+        elif self.vector_type == "p":
+            sources = ["past"]
+        for source in sources:
+            mvs = get_vectors_by_source(motion_vectors, source)
+            if self.mvs_mode == "upsampled":
+                mvs = get_nonzero_vectors(mvs)
+                mvs = motion_vectors_to_image(mvs, frame_shape)
+            elif self.mvs_mode == "dense":
+                if self.codec == "mpeg4":
+                    mvs = motion_vectors_to_grid(mvs, frame_shape)
+                elif self.codec == "h264":
+                    mvs = motion_vectors_to_grid_interpolated(mvs, frame_shape)
+            mvs = torch.from_numpy(mvs).float()
+            mvs = mvs.unsqueeze(0)  # add batch dimension
+            motion_vectors_list.append(mvs)
+        return motion_vectors_list
 
 
     def update(self, motion_vectors, frame_type, detection_boxes, frame_shape):
@@ -98,31 +124,17 @@ class MotionVectorTracker:
 
         # I frame has no motion vectors
         if frame_type != "I":
-
-            # preprocess motion vectors
-            motion_vectors = get_vectors_by_source(motion_vectors, "past")  # get only p vectors
-            motion_vectors = normalize_vectors(motion_vectors)
-
-            if self.mvs_mode == "upsampled":
-                motion_vectors = get_nonzero_vectors(motion_vectors)
-                motion_vectors = motion_vectors_to_image(motion_vectors, (frame_shape[1], frame_shape[0]))
-            elif self.mvs_mode == "dense":
-                if self.codec == "mpeg4":
-                    motion_vectors = motion_vectors_to_grid(motion_vectors, (frame_shape[1], frame_shape[0]))
-                elif self.codec == "h264":
-                    motion_vectors = motion_vectors_to_grid_interpolated(motion_vectors, (frame_shape[1], frame_shape[0]))
-
-            motion_vectors = torch.from_numpy(motion_vectors).float()
-            motion_vectors = motion_vectors.unsqueeze(0)  # add batch dimension
+            motion_vectors = self.preprocess_motion_vectors_(motion_vectors, (frame_shape[1], frame_shape[0]))
+            # motion vectors is now a list of tensors where the first item is the P vectors and the second item the B vectors
 
             sample = self.standardize_motion_vectors({"motion_vectors": motion_vectors})
             motion_vectors = sample["motion_vectors"]
 
-            # swap channel order of motion vectors from BGR to RGB
-            motion_vectors = motion_vectors[..., [2, 1, 0]]
-
-            # swap motion vector axes so that shape is (B, C, H, W) instead of (B, H, W, C)
-            motion_vectors = motion_vectors.permute(0, 3, 1, 2)
+            for i in range(len(motion_vectors)):
+                # swap channel order of motion vectors from BGR to RGB
+                motion_vectors[i] = motion_vectors[i][..., [2, 1, 0]]
+                # swap motion vector axes so that shape is (B, C, H, W) instead of (B, H, W, C)
+                motion_vectors[i] = motion_vectors[i].permute(0, 3, 1, 2)
 
             self.last_motion_vectors = motion_vectors
 
@@ -139,14 +151,21 @@ class MotionVectorTracker:
         boxes_prev_ = boxes_prev.clone()
         if self.mvs_mode == "dense":
             boxes_prev_[:, 1:] = boxes_prev_[:, 1:] / 16.0
-
         boxes_prev_ = boxes_prev_.to(self.device)
-        self.last_motion_vectors = self.last_motion_vectors.to(self.device)
+
+        motion_vectors_p = self.last_motion_vectors[0]
+        motion_vectors_p = motion_vectors_p.to(self.device)
+        try:
+            motion_vectors_b = self.last_motion_vectors[1]
+        except IndexError:
+            motion_vectors_b = None
+        else:
+            motion_vectors_b = motion_vectors_b.to(self.device)
 
         # feed into model, retrieve output
         with torch.set_grad_enabled(False):
             t_start_inference = time.process_time()
-            velocities_pred = self.model(self.last_motion_vectors,
+            velocities_pred = self.model(motion_vectors_p, motion_vectors_b,
                 boxes_prev_)
             self.last_inference_dt = time.process_time() - t_start_inference
 

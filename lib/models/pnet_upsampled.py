@@ -10,7 +10,7 @@ from lib.utils import load_pretrained_weights_to_modified_resnet, \
 
 
 class PropagationNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, vector_type="p"):
         super(PropagationNetwork, self).__init__()
 
         self.POOLING_SIZE = 7  # the ROIs are split into m x m regions
@@ -21,8 +21,13 @@ class PropagationNetwork(nn.Module):
         resnet_weights = model_zoo.load_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
         load_pretrained_weights_to_modified_resnet(resnet, resnet_weights)
 
+        if vector_type == "p":
+            conv0_in_channels = 2
+        elif vector_type == "p+b":
+            conv0_in_channels = 4
+
         base = [
-            resnet.conv1,
+            nn.Conv2d(conv0_in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False),
             resnet.bn1,
             resnet.relu,
             resnet.maxpool,
@@ -50,7 +55,17 @@ class PropagationNetwork(nn.Module):
         self.pooling = nn.AvgPool2d(kernel_size=self.POOLING_SIZE, stride=self.POOLING_SIZE)
 
 
-    def forward(self, motion_vectors, boxes_prev):
+    def forward(self, motion_vectors_p, motion_vectors_b, boxes_prev):
+        # motion vector are of shape [1, C, H, W]
+        # channels are in RGB order where red is x motion and green is y motion
+        motion_vectors_p = motion_vectors_p[:, :2, :, :]   # pick out the red and green channel
+        motion_vectors = motion_vectors_p
+
+        # concatenate P and B vectors in channel dimension
+        if motion_vectors_b is not None:
+            motion_vectors_b = motion_vectors_b[:, :2, :, :]
+            motion_vectors = torch.cat((motion_vectors_p, motion_vectors_b), axis=1)
+
         x = self.base(motion_vectors)
         x = self.conv1x1(x)
 

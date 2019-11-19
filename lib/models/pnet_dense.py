@@ -6,21 +6,27 @@ import torchvision
 
 from lib.resnet_atrous import resnet18
 from lib.utils import load_pretrained_weights_to_modified_resnet, \
-    change_box_format
+    change_box_format, normal_init
 
 
 class PropagationNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, vector_type="p"):
         super(PropagationNetwork, self).__init__()
 
         self.POOLING_SIZE = 7  # the ROIs are split into m x m regions
+        self.FIXED_BLOCKS = 2
 
         resnet = resnet18()
         resnet_weights = model_zoo.load_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
         load_pretrained_weights_to_modified_resnet(resnet, resnet_weights)
 
+        if vector_type == "p":
+            conv0_in_channels = 2
+        elif vector_type == "p+b":
+            conv0_in_channels = 4
+
         base = [
-            nn.Conv2d(2, 64, kernel_size=3, stride=1, padding=1, bias=False),  # old version prior to 2019-10-29_01-16-42
+            nn.Conv2d(conv0_in_channels, 64, kernel_size=3, stride=1, padding=1, bias=False),
             resnet.bn1,
             resnet.relu,
             resnet.maxpool,
@@ -31,9 +37,11 @@ class PropagationNetwork(nn.Module):
         ]
         self.base = nn.Sequential(*base)
 
-        # fix pretrained base layers
-        for p in self.base[6].parameters(): p.requires_grad = False
-        for p in self.base[4].parameters(): p.requires_grad = False
+        assert (0 <= self.FIXED_BLOCKS <= 2) # set this value to 0, so we can train all blocks
+        if self.FIXED_BLOCKS >= 2: # fix first 2 blocks
+            for p in self.base[6].parameters(): p.requires_grad = False
+        if self.FIXED_BLOCKS >= 1: # fix first 1 block
+            for p in self.base[4].parameters(): p.requires_grad = False
 
         self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn4 = nn.BatchNorm2d(256)
@@ -42,18 +50,18 @@ class PropagationNetwork(nn.Module):
         self.conv1x1 = nn.Conv2d(256, 2*self.POOLING_SIZE*self.POOLING_SIZE, kernel_size=(1, 1), stride=(1, 1), padding=0, bias=False)
         self.pooling = nn.AvgPool2d(kernel_size=self.POOLING_SIZE, stride=self.POOLING_SIZE)
 
-        # fix pretrained layers
-        for p in self.base[0].parameters(): p.requires_grad = False
-        for p in self.base[1].parameters(): p.requires_grad = False
-        for p in self.base[3].parameters(): p.requires_grad = False
-        for p in self.conv4.parameters(): p.requires_grad = False
-        for p in self.bn4.parameters(): p.requires_grad = False
 
-
-    def forward(self, motion_vectors, boxes_prev):
+    def forward(self, motion_vectors_p, motion_vectors_b, boxes_prev):
         # motion vector are of shape [1, C, H, W]
         # channels are in RGB order where red is x motion and green is y motion
-        motion_vectors = motion_vectors[:, :2, :, :]   # pick out the red and green channel
+        motion_vectors_p = motion_vectors_p[:, :2, :, :]   # pick out the red and green channel
+        motion_vectors = motion_vectors_p
+
+        # concatenate P and B vectors in channel dimension
+        if motion_vectors_b is not None:
+            motion_vectors_b = motion_vectors_b[:, :2, :, :]
+            motion_vectors = torch.cat((motion_vectors_p, motion_vectors_b), axis=1)
+
         x = self.base(motion_vectors)
 
         x = self.conv4(x)
@@ -93,6 +101,6 @@ class PropagationNetwork(nn.Module):
 if __name__ == "__main__":
 
     model = PropagationNetwork()
-    print([p.requires_grad for p in self.parameters()])
+    print([p.requires_grad for p in model.parameters()])
     print("Model No. of Params {}".format(count_params(model)))
     print(model)
