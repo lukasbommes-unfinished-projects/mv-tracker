@@ -7,7 +7,7 @@ import cv2
 import pickle
 
 from video_cap import VideoCap
-from mvt.utils import draw_motion_vectors, draw_boxes
+from mvt.utils import draw_motion_vectors, draw_boxes, draw_box_ids
 
 from detector import DetectorTF
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     tracker_iou_thres = 0.05
 
     tracker_baseline = MotionVectorTrackerBaseline(iou_threshold=tracker_iou_thres,
-        use_only_p_vectors=False)
+        use_only_p_vectors=False, use_numeric_ids=True)
     # tracker_deep = MotionVectorTrackerDeep(
     #     iou_threshold=tracker_iou_thres,
     #     weights_file="models/tracker/2019-10-29_09-35-25/model_lowest_loss.pth",
@@ -47,7 +47,8 @@ if __name__ == "__main__":
     #     vector_type="p",
     #     codec=codec,
     #     stats=StatsMpeg4UpsampledFullSinglescale,
-    #     device=torch.device("cuda:0"))
+    #     device=torch.device("cuda:0"),
+    #     use_numeric_ids=True)
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
         weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
@@ -55,7 +56,8 @@ if __name__ == "__main__":
         vector_type="p+b",
         codec=codec,
         stats=StatsH264DenseFullSinglescale,
-        device=torch.device("cuda:0"))
+        device=torch.device("cuda:0"),
+        use_numeric_ids=True)
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
@@ -120,9 +122,11 @@ if __name__ == "__main__":
         else:
             tracker_baseline.predict(motion_vectors, frame_type)
             track_boxes_baseline = tracker_baseline.get_boxes()
+            box_ids_baseline = tracker_baseline.get_box_ids()
 
             tracker_deep.predict(motion_vectors, frame_type, frame.shape)
             track_boxes_deep = tracker_deep.get_boxes()
+            box_ids_deep = tracker_deep.get_box_ids()
 
             if prev_boxes_baseline is not None:
                frame = draw_boxes(frame, prev_boxes_baseline, color=color_previous_baseline)
@@ -134,6 +138,8 @@ if __name__ == "__main__":
 
             frame = draw_boxes(frame, track_boxes_baseline, color=color_tracker_baseline)
             frame = draw_boxes(frame, track_boxes_deep, color=color_tracker_deep)
+            frame = draw_box_ids(frame, track_boxes_baseline, box_ids_baseline, color=color_tracker_baseline)
+            frame = draw_box_ids(frame, track_boxes_deep, box_ids_deep, color=color_tracker_deep)
 
         frame = draw_boxes(frame, det_boxes, color=color_detection)
 

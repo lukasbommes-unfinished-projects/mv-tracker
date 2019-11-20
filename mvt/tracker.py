@@ -9,15 +9,17 @@ from mvt.utils import draw_motion_vectors, draw_boxes
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, use_only_p_vectors=False, use_kalman=False):
+    def __init__(self, iou_threshold, use_only_p_vectors=False, use_kalman=False, use_numeric_ids=False):
         self.iou_threshold = iou_threshold
         self.use_only_p_vectors = use_only_p_vectors
         self.use_kalman = use_kalman
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
         self.last_motion_vectors = np.empty(shape=(0, 10))
+        self.next_id = 1
         if self.use_kalman:
             self.filters = []
+        self.use_numeric_ids = use_numeric_ids
 
 
     def update(self, motion_vectors, frame_type, detection_boxes):
@@ -43,8 +45,12 @@ class MotionVectorTracker:
 
         # handle unmatched detections by spawning new trackers
         for d in unmatched_detectors:
-            uid = uuid.uuid4()
-            self.box_ids.append(uid)
+            if self.use_numeric_ids:
+                self.box_ids.append(self.next_id)
+                self.next_id += 1
+            else:
+                uid = uuid.uuid4()
+                self.box_ids.append(uid)
             self.boxes = np.vstack((self.boxes, detection_boxes[d]))
             if self.use_kalman:
                 filter = trackerlib.Kalman()

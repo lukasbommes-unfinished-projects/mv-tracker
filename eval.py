@@ -196,7 +196,7 @@ if __name__ == "__main__":
             if args.tracker_type == "baseline":
                 use_only_p_vectors = (args.vector_type == "p")
                 tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres,
-                    use_only_p_vectors=use_only_p_vectors)
+                    use_only_p_vectors=use_only_p_vectors, use_numeric_ids=True)
             elif args.tracker_type == "deep":
                 if args.codec == "mpeg4" and args.mvs_mode == "upsampled":
                     stats = StatsMpeg4UpsampledFullSinglescale()
@@ -213,7 +213,8 @@ if __name__ == "__main__":
                     vector_type=args.vector_type,
                     codec=args.codec,
                     stats=stats,
-                    device=device)
+                    device=device,
+                    use_numeric_ids=True)
 
             print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
 

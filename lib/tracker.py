@@ -25,7 +25,7 @@ from lib.utils import load_pretrained_weights
 
 class MotionVectorTracker:
     def __init__(self, iou_threshold, weights_file, mvs_mode, vector_type,
-        codec, stats, device=None):
+        codec, stats, device=None, use_numeric_ids=False):
         self.iou_threshold = iou_threshold
         self.mvs_mode = mvs_mode
         self.vector_type = vector_type
@@ -34,10 +34,12 @@ class MotionVectorTracker:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
+        self.use_numeric_ids = use_numeric_ids
 
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
         self.last_motion_vectors = torch.zeros(size=(1, 600, 1000, 3))
+        self.next_id = 1
 
         self.standardize_motion_vectors = StandardizeMotionVectors(
             mean=stats.motion_vectors["mean"],
@@ -104,8 +106,12 @@ class MotionVectorTracker:
 
         # handle unmatched detections by spawning new trackers
         for d in unmatched_detectors:
-            uid = uuid.uuid4()
-            self.box_ids.append(uid)
+            if self.use_numeric_ids:
+                self.box_ids.append(self.next_id)
+                self.next_id += 1
+            else:
+                uid = uuid.uuid4()
+                self.box_ids.append(uid)
             self.boxes = np.vstack((self.boxes, detection_boxes[d]))
             #print("Created new tracker {} for detector {}".format(str(uid)[:6], d))
 
