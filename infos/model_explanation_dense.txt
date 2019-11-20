@@ -1,9 +1,11 @@
 ###############################################
 # Best models so far are:
-# 2019-11-08_04-15-42 -- Dense, MPEG4, Single Scale, Full dataset, only P vectors
+# 2019-11-08_04-15-42 (model_lowest_loss) -- Dense, MPEG4, Single Scale, Full dataset, only P vectors
 # 2019-11-06_04-04-14 -- Dense, MPEG4, Single Scale, Static cameras, only P vectors
-# 2019-11-12_05-17-34 -- Dense, H264, Single Scale, Full dataset, only P vectors
+# 2019-11-12_05-17-34 (model_highest_iou) -- Dense, H264, Single Scale, Full dataset, only P vectors
 # 2019-11-08_09-25-01 -- Dense, H264, Single Scale, Static cameras, only P vectors
+# 2019-11-19_16-16-13 (model_highest_iou) -- Dense, H264, Single Scale, Full dataset, P+B vectors
+# 2019-11-19_06-52-52 -- Dense, H264, Single Scale, Static cameras, P+B vectors
 #
 ###############################################
 

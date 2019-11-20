@@ -60,7 +60,7 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
     parser.add_argument('--detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
     parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
     parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
-    parser.add_argument('--repeats', type=int, help='How often to repeat the measurement of each sequence to produce timing statistics (mean and std).', default=10)
+    parser.add_argument('--repeats', type=int, help='How often to repeat the measurement of each sequence to produce timing statistics (mean and std).', default=5)
     parser.add_argument('--gpu', type=int, help='Index of the GPU on which to run inference of deep tracker. Pass -1 to run on CPU.', default=0)
     return parser.parse_args()
 
@@ -145,11 +145,18 @@ if __name__ == "__main__":
         "mean_fps_predict": [],
         "mean_fps_update": [],
         "mean_fps_total": [],
-        "mean_fps_inference": []
+        "mean_fps_inference": [],
+        "total_runtime": [],
     }
 
     for repetition in range(args.repeats):
         dts = {}
+        dts["accumulated"] = {
+            "update": [],
+            "predict": [],
+            "total": [],
+            "inference": []
+        }
 
         for data_dir in data_dirs:
             num_frames = len(glob.glob(os.path.join(data_dir, 'img1/*.jpg')))
@@ -158,12 +165,6 @@ if __name__ == "__main__":
             sequence_path = '/'.join(data_dir.split('/')[:-1])
             detector_name = sequence_name.split('-')[-1]
             dts[sequence_name] = {
-                "update": [],
-                "predict": [],
-                "total": [],
-                "inference": []
-            }
-            dts["accumulated"] = {
                 "update": [],
                 "predict": [],
                 "total": [],
@@ -224,10 +225,9 @@ if __name__ == "__main__":
             frame_idx = 0
 
             with open(os.path.join(output_directory, '{}.txt'.format(sequence_name)), mode="w") as csvfile:
-
                 csv_writer = csv.writer(csvfile, delimiter=',')
-
                 pbar = tqdm(total=len(detections))
+
                 while True:
                     ret, frame, motion_vectors, frame_type, _ = cap.read()
                     if not ret:
@@ -261,7 +261,6 @@ if __name__ == "__main__":
                     # revert scaling so that comparison with unscaled ground truth in compute_metrics.py makes sense
                     track_boxes = track_boxes / args.scale
 
-
                     for track_box, track_id in zip(track_boxes, track_ids):
                         csv_writer.writerow([frame_idx+1, track_id, track_box[0], track_box[1],
                             track_box[2], track_box[3], -1, -1, -1, -1])
@@ -293,6 +292,7 @@ if __name__ == "__main__":
                         np.std(subdict["inference"])])
 
             # compute average over entire dataset
+            csv_writer.writerow(["Total runtime:", np.sum(dts["accumulated"]["total"]),'','','','','','',''])
             csv_writer.writerow(["Averages for this repetition:",'','','','','','','',''])
             csv_writer.writerow(["predict mean dt", "predict std dt", "update mean dt",
                 "update std dt", "total mean dt", "total std dt", "inference mean dt",
@@ -321,6 +321,7 @@ if __name__ == "__main__":
             overall_stats["mean_fps_update"].append(1/np.mean(dts["accumulated"]["update"]))
             overall_stats["mean_fps_total"].append(1/np.mean(dts["accumulated"]["total"]))
             overall_stats["mean_fps_inference"].append(1/np.mean(dts["accumulated"]["inference"]))
+            overall_stats["total_runtime"].append(np.sum(dts["accumulated"]["total"]))
 
     # write overall timing stats
     with open(os.path.join(output_directory, 'time_perf.log'), mode="a") as csvfile:
@@ -348,3 +349,4 @@ if __name__ == "__main__":
             np.std(overall_stats["mean_fps_total"]),
             np.mean(overall_stats["mean_fps_inference"]),
             np.std(overall_stats["mean_fps_inference"]), ""])
+        csv_writer.writerow(["Mean of total runtime:", np.mean(overall_stats["total_runtime"]),"Std of total runtime:", np.std(overall_stats["total_runtime"]),'','','','',''])

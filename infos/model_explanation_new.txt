@@ -1,15 +1,3 @@
-2019-11-19_07-29-21 Like 2019-11-19_07-12-14, but uses "p+b" vectors
-trained via cmd: python train.py --gpu 1 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled --codec h264 --vector_type "p+b"
--> test performance
-
-2019-11-19_07-28-14 Like 2019-10-30_02-47-42, but uses new pnet_upsampled model with 2-channel conv0 layer
-trained via cmd: python train.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-4 --batch_size 8 --weight_decay 0.0005 --mvs_mode upsampled
--> test performance
-
-2019-11-19_07-12-14 Like 2019-10-29_09-35-25, but uses new pnet_upsampled model with 2-channel conv0 layer
-trained via cmd: python train.py --gpu 1 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled --codec h264
--> test performance
-
 ###############################################
 # Best models so far are:
 # 2019-10-30_02-47-42 (model_highest_iou) -- Upsampled, MPEG4, Single Scale, Full dataset, only P vectors
@@ -18,6 +6,18 @@ trained via cmd: python train.py --gpu 1 --scales 1.0 --scheduler_frequency 40 -
 # 2019-10-29_09-07-07 -- Upsampled, H264, Single Scale, Static cameras, only P vectors
 #
 ###############################################
+
+2019-11-19_07-29-21 Like 2019-11-19_07-12-14, but uses "p+b" vectors
+trained via cmd: python train.py --gpu 1 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled --codec h264 --vector_type "p+b"
+-> aborted
+
+2019-11-19_07-28-14 Like 2019-10-30_02-47-42, but uses new pnet_upsampled model with 2-channel conv0 layer
+trained via cmd: python train.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-4 --batch_size 8 --weight_decay 0.0005 --mvs_mode upsampled
+-> aborted
+
+2019-11-19_07-12-14 Like 2019-10-29_09-35-25, but uses new pnet_upsampled model with 2-channel conv0 layer
+trained via cmd: python train.py --gpu 1 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled --codec h264
+-> aborted
 
 2019-10-30_02-47-42 As 2019-10-29_07-56-42, but uses higher learning rate of 1e-4 and weight decay 0.0005.
 trained via cmd: python train_new.py --gpu 0 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-4 --batch_size 8 --weight_decay 0.0005 --mvs_mode upsampled

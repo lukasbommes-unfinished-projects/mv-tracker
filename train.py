@@ -17,10 +17,9 @@ import torchvision
 from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.dataset.dataset_new import MotionVectorDataset
-from lib.dataset.stats import StatsH264UpsampledFullSinglescale as Stats
+from lib.dataset.stats import StatsH264DenseFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange
-from lib.losses.losses import IouLoss
 from lib.dataset.velocities import box_from_velocities, box_from_velocities_2d
 from lib.utils import compute_mean_iou, weight_checksum, count_params, \
     load_pretrained_weights
@@ -109,7 +108,11 @@ def train(model, optimizer, mvs_mode, vector_type, scheduler, batch_size,
                     boxes = boxes.view(-1, 5)
                     velocities = velocities.view(-1, velocity_dim)
 
-                    velocities_pred = model(motion_vectors_p, motion_vectors_b, boxes_prev)
+                    if args.mvs_mode == "upsampled":
+                        velocities_pred = model(motion_vectors_p, boxes_prev)
+                    elif args.mvs_mode == "dense":
+                        velocities_pred = model(motion_vectors_p, motion_vectors_b, boxes_prev)
+
                     loss = criterion_velocity(velocities_pred, velocities)
 
                     if phase == "train":
@@ -307,7 +310,7 @@ if __name__ == "__main__":
     device = torch.device("cuda:{}".format(args.gpu) if torch.cuda.is_available() else "cpu")
 
     if args.mvs_mode == "upsampled":
-        model = PropagationNetworkUpsampled(vector_type=args.vector_type)
+        model = PropagationNetworkUpsampled()
     elif args.mvs_mode =="dense":
         model = PropagationNetworkDense(vector_type=args.vector_type)
 

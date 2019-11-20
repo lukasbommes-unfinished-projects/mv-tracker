@@ -23,13 +23,13 @@ from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale, \
 if __name__ == "__main__":
 
     scaling_factor = 1.0
-    codec = "h264"
+    codec = "mpeg4"
 
     # reminder: when evaluating h264 models, use h264 videos
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, static cam
     #video_file = "data/MOT17/train/MOT17-11-FRCNN/MOT17-11-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, moving cam
-    video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, static cam
-    #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, moving cam
+    #video_file = "data/MOT17/test/MOT17-08-FRCNN/MOT17-08-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, static cam
+    video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, moving cam
     #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, moving cam
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         use_only_p_vectors=False)
     # tracker_deep = MotionVectorTrackerDeep(
     #     iou_threshold=tracker_iou_thres,
-    #     weights_file="models/tracker/2019-10-30_02-47-42/model_highest_iou.pth", #2019-10-16_09-24-32/model_lowest_loss.pth,
+    #     weights_file="models/tracker/2019-10-29_09-35-25/model_lowest_loss.pth",
     #     mvs_mode="upsampled",
     #     vector_type="p",
     #     codec=codec,
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     #     device=torch.device("cuda:0"))
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-11-19_06-52-52/model_highest_iou.pth", #2019-10-25_05-21-33/model_highest_iou.pth",
+        weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
         mvs_mode="dense",
         vector_type="p+b",
         codec=codec,

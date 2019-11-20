@@ -1,7 +1,14 @@
+2019-11-19_16-16-13 Uses model 2019-11-08_04-15-42 full dataset with p+b vectors
+trained via cmd: python train.py --codec=h264 --vector_type="p+b" --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=0 --intial_weights_file=models/tracker/2019-11-19_06-52-52/model_highest_iou.pth
+-> test performance: (model_highest_iou) good on static cams, not so good on moving cams
+
+2019-11-19_15-47-58 Uses model 2019-11-19_15-47-58 which uses p+b vectors but concatenates them only after the base instead of before the base
+trained via cmd: python train.py --static_only --codec=h264 --vector_type="p+b" --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
+-> test performance:
 
 2019-11-19_06-52-52 uses model 2019-11-06_04-04-14 with "p+b" vector_type
 trained via cmd: python train.py --static_only --codec=h264 --vector_type="p+b" --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0
--> test performance:
+-> test performance: (model_highest_iou) works okay, maybe slightly better than then model with p vectors only
 
 ###
 

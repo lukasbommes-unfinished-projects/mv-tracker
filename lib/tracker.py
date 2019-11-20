@@ -49,7 +49,7 @@ class MotionVectorTracker:
 
         # load model and weigths
         if self.mvs_mode == "upsampled":
-            self.model = PropagationNetworkUpsampled(vector_type=self.vector_type)
+            self.model = PropagationNetworkUpsampled()
         elif self.mvs_mode == "dense":
             self.model = PropagationNetworkDense(vector_type=self.vector_type)
         self.model = self.model.to(self.device)
@@ -165,8 +165,11 @@ class MotionVectorTracker:
         # feed into model, retrieve output
         with torch.set_grad_enabled(False):
             t_start_inference = time.process_time()
-            velocities_pred = self.model(motion_vectors_p, motion_vectors_b,
-                boxes_prev_)
+            if self.mvs_mode == "upsampled":
+                velocities_pred = self.model(motion_vectors_p, boxes_prev_)
+            elif self.mvs_mode == "dense":
+                velocities_pred = self.model(motion_vectors_p, motion_vectors_b,
+                    boxes_prev_)
             self.last_inference_dt = time.process_time() - t_start_inference
 
             # make sure output is on CPU
