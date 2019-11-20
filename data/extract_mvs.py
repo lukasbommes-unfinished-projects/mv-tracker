@@ -6,7 +6,7 @@ from seqinfo import scales, frame_rates, dir_names
 
 
 CODEC = "mpeg4"  # "h264" or "mpeg4"
-DATASET = "MOT17"
+DATASET = "MOT16"
 
 if __name__ == "__main__":
 

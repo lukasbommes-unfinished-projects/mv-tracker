@@ -249,6 +249,7 @@ if __name__ == "__main__":
                         t_start_predict = time.process_time()
                         if args.tracker_type == "baseline":
                             tracker.predict(motion_vectors, frame_type)
+                            dts[sequence_name]["inference"].append(np.nan)
                         elif args.tracker_type == "deep":
                             tracker.predict(motion_vectors, frame_type, frame.shape)
                             dts[sequence_name]["inference"].append(tracker.last_inference_dt)

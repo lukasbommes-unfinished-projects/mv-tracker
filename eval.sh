@@ -12,10 +12,14 @@ VAL_SEQUENCES=('MOT17/train/MOT17-09-DPM'
                 'MOT17/train/MOT17-10-SDP')
 
 ########################### MOT16 and MOT17 Benchmark ###########################
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="test" --repeats=1
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT16" --mode="test" --repeats=1
-python eval.py --codec=mpeg4 --tracker_type=deep --mvs_mode=dense --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-11-08_04-15-42/model_lowest_loss.pth --benchmark="MOT17" --mode="test" --repeats=1
-python eval.py --codec=mpeg4 --tracker_type=deep --mvs_mode=dense --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-11-08_04-15-42/model_lowest_loss.pth --benchmark="MOT16" --mode="test" --repeats=1
+#python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="test" --repeats=1
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1
+#python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT16" --mode="test" --repeats=1
+python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT16" --mode="train" --repeats=1
+#python eval.py --codec=mpeg4 --tracker_type=deep --mvs_mode=dense --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-11-08_04-15-42/model_lowest_loss.pth --benchmark="MOT17" --mode="test" --repeats=1
+python eval.py --codec=mpeg4 --tracker_type=deep --mvs_mode=dense --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-11-08_04-15-42/model_lowest_loss.pth --benchmark="MOT17" --mode="train" --repeats=1
+#python eval.py --codec=mpeg4 --tracker_type=deep --mvs_mode=dense --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-11-08_04-15-42/model_lowest_loss.pth --benchmark="MOT16" --mode="test" --repeats=1
+python eval.py --codec=mpeg4 --tracker_type=deep --mvs_mode=dense --tracker_iou_thres=0.1 --detector_interval=3 --root_dir=$ROOT_DIR --gpu=$GPU --deep_tracker_weights_file=models/tracker/2019-11-08_04-15-42/model_lowest_loss.pth --benchmark="MOT16" --mode="train" --repeats=1
 
 # ########################### Baseline Tracker ###########################
 #
