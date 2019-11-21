@@ -1,17 +1,15 @@
 import os
 import time
-import glob
-import pickle
 
 import torch
 import numpy as np
 import cv2
+import pickle
 
 from video_cap import VideoCap
-from mvt.utils import draw_motion_vectors, draw_boxes, draw_box_ids, draw_scores
+from mvt.utils import draw_motion_vectors, draw_boxes, draw_box_ids
 
 from detector import DetectorTF
-from lib.dataset.loaders import load_detections
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
 from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
@@ -34,9 +32,6 @@ if __name__ == "__main__":
     #video_file = "data/MOT17/test/MOT17-12-FRCNN/MOT17-12-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # test set, moving cam
     #video_file = "data/MOT17/train/MOT17-09-FRCNN/MOT17-09-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, static cam
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, moving cam
-
-    use_offline_detections = True
-    detections_file = "data/MOT17/test/MOT17-08-SDP/det/det.txt"
 
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
@@ -71,15 +66,10 @@ if __name__ == "__main__":
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
 
-    if use_offline_detections:
-        base_dir = str.split(video_file, "/")[:-1]
-        num_frames = len(glob.glob(os.path.join(*base_dir, 'img1', '*.jpg')))
-        det_boxes_all, det_scores_all = load_detections(detections_file, num_frames)
-    else:
-        detector = DetectorTF(path=detector_path,
-                            box_size_threshold=detector_box_size_thres,
-                            scaling_factor=1.0,
-                            gpu=0)
+    detector = DetectorTF(path=detector_path,
+                        box_size_threshold=detector_box_size_thres,
+                        scaling_factor=1.0,
+                        gpu=0)
 
     cap = VideoCap()
 
@@ -121,13 +111,9 @@ if __name__ == "__main__":
 
         # update with detections
         if frame_idx % detector_interval == 0:
-            if use_offline_detections:
-                det_boxes = det_boxes_all[frame_idx]
-                det_scores = det_scores_all[frame_idx]
-            else:
-                detections = detector.detect(frame)
-                det_boxes = detections['detection_boxes']
-                det_scores = detections['detection_scores']
+            detections = detector.detect(frame)
+            det_boxes = detections['detection_boxes']
+            det_scores = detections['detection_scores']
             tracker_baseline.update(motion_vectors, frame_type, det_boxes, det_scores)
             tracker_deep.update(motion_vectors, frame_type, det_boxes, frame.shape)
             if prev_boxes_baseline is not None:
@@ -160,9 +146,7 @@ if __name__ == "__main__":
             frame = draw_box_ids(frame, track_boxes_baseline, box_ids_baseline, color=color_tracker_baseline)
             frame = draw_box_ids(frame, track_boxes_deep, box_ids_deep, color=color_tracker_deep)
 
-
         frame = draw_boxes(frame, det_boxes, color=color_detection)
-        frame = draw_scores(frame, det_boxes, det_scores, color=color_detection)
 
         frame_idx += 1
         cv2.imshow("frame", frame)

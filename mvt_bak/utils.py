@@ -42,17 +42,7 @@ def draw_box_ids(frame, bounding_boxes, box_ids, color=(0, 0, 255)):
         ymin = int(box[1])
         xmax = int(box[0] + box[2])
         ymax = int(box[1] + box[3])
-        cv2.putText(frame, '{}'.format(str(box_id)[:6]), (xmax-20, ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2, cv2.LINE_AA)
-    return frame
-
-
-def draw_scores(frame, bounding_boxes, scores, color=(0, 0, 255)):
-    for box, score in zip(bounding_boxes, scores):
-        xmin = int(box[0])
-        ymin = int(box[1])
-        xmax = int(box[0] + box[2])
-        ymax = int(box[1] + box[3])
-        cv2.putText(frame, '{}'.format(str(score)), (xmin, ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2, cv2.LINE_AA)
+        cv2.putText(frame, '{}'.format(str(box_id)[:6]), (xmin, ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2, cv2.LINE_AA)
     return frame
 
 

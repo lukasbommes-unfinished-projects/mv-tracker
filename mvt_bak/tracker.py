@@ -9,10 +9,8 @@ from mvt.utils import draw_motion_vectors, draw_boxes
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, det_conf_threshold, use_only_p_vectors=False,
-        use_kalman=False, use_numeric_ids=False):
+    def __init__(self, iou_threshold, use_only_p_vectors=False, use_kalman=False, use_numeric_ids=False):
         self.iou_threshold = iou_threshold
-        self.det_conf_threshold = det_conf_threshold
         self.use_only_p_vectors = use_only_p_vectors
         self.use_kalman = use_kalman
         self.boxes = np.empty(shape=(0, 4))
@@ -24,17 +22,7 @@ class MotionVectorTracker:
         self.use_numeric_ids = use_numeric_ids
 
 
-    def _filter_low_confidence_detections(self, detection_boxes, detection_scores):
-        idx = np.nonzero(detection_scores >= self.det_conf_threshold)
-        detection_boxes[idx]
-        return detection_boxes[idx], detection_scores[idx]
-
-
-    def update(self, motion_vectors, frame_type, detection_boxes, detection_scores):
-
-        # remove detections with confidence lower than det_conf_threshold
-        detection_boxes, detection_scores = self._filter_low_confidence_detections(detection_boxes, detection_scores)
-
+    def update(self, motion_vectors, frame_type, detection_boxes):
         # bring boxes into next state
         self.predict(motion_vectors, frame_type)
 

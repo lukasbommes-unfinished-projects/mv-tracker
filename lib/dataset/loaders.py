@@ -2,15 +2,18 @@ import numpy as np
 
 
 def load_detections(det_file, num_frames):
-    detections = []
+    det_boxes = []
+    det_scores = []
     raw_data = np.genfromtxt(det_file, delimiter=',')
     for frame_idx in range(num_frames):
         idx = np.where(raw_data[:, 0] == frame_idx+1)
         if idx[0].size:
-            detections.append(np.stack(raw_data[idx], axis=0)[:, 2:6])
+            det_boxes.append(np.stack(raw_data[idx], axis=0)[:, 2:6])
+            det_scores.append(np.stack(raw_data[idx], axis=0)[:, 6])
         else:
-            detections.append(np.empty(shape=(0, 4)))
-    return detections
+            det_boxes.append(np.empty(shape=(0, 4)))
+            det_scores.append(0.0)
+    return det_boxes, det_scores
 
 
 def load_groundtruth(gt_file, num_frames, only_eval=False):

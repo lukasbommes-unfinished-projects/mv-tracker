@@ -58,7 +58,6 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
     parser.add_argument('--tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
     parser.add_argument('--tracker_iou_thres', type=float, help='The minimum IoU needed to match a tracked boy with a detected box during data assocation step.', default=0.1)
     parser.add_argument('--detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
-    parser.add_argument('--det_conf_threshold', type=float, help='Detections with confidence score lower than this value are discarded.', default=0.7)
     parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
     parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
     parser.add_argument('--repeats', type=int, help='How often to repeat the measurement of each sequence to produce timing statistics (mean and std).', default=3)
@@ -161,7 +160,7 @@ if __name__ == "__main__":
 
         for data_dir in data_dirs:
             num_frames = len(glob.glob(os.path.join(data_dir, 'img1/*.jpg')))
-            det_boxes, det_scores = load_detections(os.path.join(data_dir, 'det/det.txt'), num_frames)
+            detections = load_detections(os.path.join(data_dir, 'det/det.txt'), num_frames)
             sequence_name = data_dir.split('/')[-1]
             sequence_path = '/'.join(data_dir.split('/')[:-1])
             detector_name = sequence_name.split('-')[-1]
@@ -196,9 +195,7 @@ if __name__ == "__main__":
             # init tracker
             if args.tracker_type == "baseline":
                 use_only_p_vectors = (args.vector_type == "p")
-                tracker = MotionVectorTrackerBaseline(
-                    iou_threshold=args.tracker_iou_thres,
-                    det_conf_threshold=args.det_conf_threshold,
+                tracker = MotionVectorTrackerBaseline(iou_threshold=args.tracker_iou_thres,
                     use_only_p_vectors=use_only_p_vectors, use_numeric_ids=True)
             elif args.tracker_type == "deep":
                 if args.codec == "mpeg4" and args.mvs_mode == "upsampled":
@@ -230,7 +227,7 @@ if __name__ == "__main__":
 
             with open(os.path.join(output_directory, '{}.txt'.format(sequence_name)), mode="w") as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter=',')
-                pbar = tqdm(total=len(det_boxes))
+                pbar = tqdm(total=len(detections))
 
                 while True:
                     ret, frame, motion_vectors, frame_type, _ = cap.read()
@@ -243,9 +240,9 @@ if __name__ == "__main__":
                     if frame_idx % args.detector_interval == 0:
                         t_start_update = time.process_time()
                         if args.tracker_type == "baseline":
-                            tracker.update(motion_vectors, frame_type, det_boxes[frame_idx]*args.scale, det_scores[frame_idx])
+                            tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale)
                         elif args.tracker_type == "deep":
-                            tracker.update(motion_vectors, frame_type, det_boxes[frame_idx]*args.scale, frame.shape)
+                            tracker.update(motion_vectors, frame_type, detections[frame_idx]*args.scale, frame.shape)
                         dts[sequence_name]["update"].append(time.process_time() - t_start_update)
 
                     # prediction by tracker
