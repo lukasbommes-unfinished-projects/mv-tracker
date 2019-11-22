@@ -16,7 +16,7 @@ import torchvision
 
 from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
-from lib.dataset.dataset_new import MotionVectorDataset
+from lib.dataset.dataset import MotionVectorDataset
 from lib.dataset.stats import StatsH264DenseFullSinglescale as Stats
 from lib.transforms.transforms import StandardizeMotionVectors, \
     StandardizeVelocities, RandomFlip, RandomMotionChange

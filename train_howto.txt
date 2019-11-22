@@ -1,0 +1,23 @@
+#### Tiny T-CNN ####
+
+Training of Tiny T-CNN is performed in two stages:
+1) Pretraining on static dataset
+2) Fine-Tuning on full dataset
+
+For step 1:
+1) In train.py change import `from lib.dataset.stats import StatsH264DenseStaticSinglescale as Stats`. Choose either StatsMpeg4DenseStaticSinglescale or StatsH264DenseStaticSinglescale depending on whether MPEG4 or H264 is used.
+2) In lib/models rename pnet_dense_2019-11-06_04-04-14.py to pnet_dense.py
+3) Now train model with train.py script by calling, e.g. `python train.py --static_only --codec=h264 --num_epochs=160 --scheduler_frequency=40 --weight_decay=0.0005 --learning_rate=1e-5 --gpu=0`
+4) Note down the date-timestamp of the model output folder created during training (see console log for the name). It will be needed in step 2.
+
+For step 2:
+1) In lib/models remove pnet_dense.py and rename pnet_dense_2019-11-08_04-15-42.py to pnet_dense.py
+2) In train.py change import of stats to either StatsMpeg4DenseFullSinglescale or StatsH2644DenseFullSinglescale
+3) Train with train.py by calling, e.g. `python train.py --codec=h264 --num_epochs=80 --batch_size=2 --scheduler_frequency=40 --weight_decay=0.05 --learning_rate=1e-6 --gpu=1 --intial_weights_file=models/tracker/2019-11-08_09-25-01/model_highest_iou.pth` (Note how the weights are loaded from step 1. Change the date-timestamp accordingly.)
+
+Finally you are left with a set of weights in models/tracker/<date-timestamp> which can be used in the DeepMotionVectorTracker.
+
+
+#### OTCD T-CNN ####
+
+Training can be performed immediately on the full dataset. No pretraining is needed. Also, renaming of the pnet_upsampled.py model is not needed. Just call train.py script, e.g.: `python train_new.py --gpu 1 --scales 1.0 --scheduler_frequency 40 --num_epochs 160 --learning_rate 1e-5 --batch_size 8 --weight_decay 0.0001 --mvs_mode upsampled --codec h264`
