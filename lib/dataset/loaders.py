@@ -12,7 +12,7 @@ def load_detections(det_file, num_frames):
             det_scores.append(np.stack(raw_data[idx], axis=0)[:, 6])
         else:
             det_boxes.append(np.empty(shape=(0, 4)))
-            det_scores.append(0.0)
+            det_scores.append(np.empty(shape=(0,)))
     return det_boxes, det_scores
 
 

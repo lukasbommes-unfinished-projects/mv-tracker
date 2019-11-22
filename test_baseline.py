@@ -1,23 +1,17 @@
 import os
+import time
 import glob
 
-import torch
 import numpy as np
 import cv2
 
 from video_cap import VideoCap
 from mvt.utils import draw_motion_vectors, draw_boxes, draw_box_ids, draw_scores
 
-from detector import DetectorTF
+#from detector import DetectorTF
 from lib.dataset.loaders import load_detections
 
 from mvt.tracker import MotionVectorTracker as MotionVectorTrackerBaseline
-from lib.tracker import MotionVectorTracker as MotionVectorTrackerDeep
-from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale, \
-    StatsMpeg4DenseFullSinglescale, StatsMpeg4UpsampledStaticSinglescale, \
-    StatsMpeg4UpsampledFullSinglescale, StatsH264UpsampledStaticSinglescale,\
-    StatsH264UpsampledFullSinglescale, StatsH264DenseStaticSinglescale, \
-    StatsH264DenseFullSinglescale
 
 
 if __name__ == "__main__":
@@ -34,38 +28,20 @@ if __name__ == "__main__":
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, moving cam
 
     use_offline_detections = True
-    detections_file = "data/MOT17/test/MOT17-08-SDP/det/det.txt"
+    detections_file = "data/MOT17/test/MOT17-08-DPM/det/det.txt"
 
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
-    detector_interval = 20
+    detector_interval = 6
     tracker_iou_thres = 0.1
     det_conf_threshold = 0.7
-    state_thresholds = (1, 2, 10)
+    state_thresholds = (0, 1, 10)
 
     tracker_baseline = MotionVectorTrackerBaseline(
         iou_threshold=tracker_iou_thres,
         det_conf_threshold=det_conf_threshold,
         state_thresholds=state_thresholds,
         use_only_p_vectors=False,
-        use_numeric_ids=True)
-    # tracker_deep = MotionVectorTrackerDeep(
-    #     iou_threshold=tracker_iou_thres,
-    #     weights_file="models/tracker/2019-10-29_09-35-25/model_lowest_loss.pth",
-    #     mvs_mode="upsampled",
-    #     vector_type="p",
-    #     codec=codec,
-    #     stats=StatsMpeg4UpsampledFullSinglescale,
-    #     device=torch.device("cuda:0"),
-    #     use_numeric_ids=True)
-    tracker_deep = MotionVectorTrackerDeep(
-        iou_threshold=tracker_iou_thres,
-        weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
-        mvs_mode="dense",
-        vector_type="p+b",
-        codec=codec,
-        stats=StatsH264DenseFullSinglescale,
-        device=torch.device("cuda:0"),
         use_numeric_ids=True)
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
@@ -94,11 +70,8 @@ if __name__ == "__main__":
     color_detection = (0, 0, 150)
     color_tracker_baseline = (0, 0, 255)
     color_previous_baseline = (150, 150, 255)
-    color_tracker_deep = (0, 255, 255)
-    color_previous_deep = (150, 255, 255)
 
     prev_boxes_baseline = None
-    prev_boxes_deep = None
 
     while True:
         ret, frame, motion_vectors, frame_type, _ = cap.read()
@@ -116,8 +89,6 @@ if __name__ == "__main__":
         frame = cv2.putText(frame, "Detection", (15, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_detection, 2, cv2.LINE_AA)
         frame = cv2.putText(frame, "Baseline Previous Prediction", (15, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_previous_baseline, 2, cv2.LINE_AA)
         frame = cv2.putText(frame, "Baseline Tracker Prediction", (15, 95), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_tracker_baseline, 2, cv2.LINE_AA)
-        frame = cv2.putText(frame, "Deep Previous Prediction", (15, 130), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_previous_deep, 2, cv2.LINE_AA)
-        frame = cv2.putText(frame, "Deep Tracker Prediction", (15, 165), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_tracker_deep, 2, cv2.LINE_AA)
 
         # update with detections
         if frame_idx % detector_interval == 0:
@@ -129,13 +100,9 @@ if __name__ == "__main__":
                 det_boxes = detections['detection_boxes']
                 det_scores = detections['detection_scores']
             tracker_baseline.update(motion_vectors, frame_type, det_boxes, det_scores)
-            tracker_deep.update(motion_vectors, frame_type, det_boxes, frame.shape)
             if prev_boxes_baseline is not None:
                frame = draw_boxes(frame, prev_boxes_baseline, color=color_previous_baseline)
             prev_boxes_baseline = np.copy(det_boxes)
-            if prev_boxes_deep is not None:
-               frame = draw_boxes(frame, prev_boxes_deep, color=color_previous_deep)
-            prev_boxes_deep = np.copy(det_boxes)
 
         # prediction by tracker
         else:
@@ -143,22 +110,12 @@ if __name__ == "__main__":
             track_boxes_baseline = tracker_baseline.get_boxes()
             box_ids_baseline = tracker_baseline.get_box_ids()
 
-            tracker_deep.predict(motion_vectors, frame_type, frame.shape)
-            track_boxes_deep = tracker_deep.get_boxes()
-            box_ids_deep = tracker_deep.get_box_ids()
-
             if prev_boxes_baseline is not None:
                frame = draw_boxes(frame, prev_boxes_baseline, color=color_previous_baseline)
             prev_boxes_baseline = np.copy(track_boxes_baseline)
 
-            if prev_boxes_deep is not None:
-               frame = draw_boxes(frame, prev_boxes_deep, color=color_previous_deep)
-            prev_boxes_deep = np.copy(track_boxes_deep)
-
             frame = draw_boxes(frame, track_boxes_baseline, color=color_tracker_baseline)
-            frame = draw_boxes(frame, track_boxes_deep, color=color_tracker_deep)
             frame = draw_box_ids(frame, track_boxes_baseline, box_ids_baseline, color=color_tracker_baseline)
-            frame = draw_box_ids(frame, track_boxes_deep, box_ids_deep, color=color_tracker_deep)
 
 
         frame = draw_boxes(frame, det_boxes, color=color_detection)
