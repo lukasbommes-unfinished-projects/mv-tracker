@@ -58,7 +58,7 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
     parser.add_argument('--tracker_type', type=str, help='Specifies the tracker model used, e.g. "baseline" or "deep"', default='baseline')
     parser.add_argument('--tracker_iou_thres', type=float, help='The minimum IoU needed to match a tracked boy with a detected box during data assocation step.', default=0.1)
     parser.add_argument('--detector_interval', type=int, help='The interval in which the detector is run, e.g. 10 means the detector is run on every 10th frame.', default=5)
-    parser.add_argument('--det_conf_threshold', type=float, help='Detections with confidence score lower than this value are discarded.', default=0.7)
+    parser.add_argument('--det_conf_thres', type=float, help='Detections with confidence score lower than this value are discarded.', default=0.7)
     parser.add_argument('--deep_tracker_weights_file', type=str, help='File path to the weights file of the deep tracker')
     parser.add_argument('--root_dir', type=str, help='Directory containing the MOT data', default='data')
     parser.add_argument('--repeats', type=int, help='How often to repeat the measurement of each sequence to produce timing statistics (mean and std).', default=3)
@@ -90,6 +90,7 @@ if __name__ == "__main__":
                 args.tracker_type,
                 args.vector_type,
                 "iou-thres-{}".format(args.tracker_iou_thres),
+                "conf-thres-{}".format(args.det_conf_thres),
                 "det-interval-{}".format(args.detector_interval))
         elif args.codec == "mpeg4":
             output_directory = os.path.join(
@@ -98,6 +99,7 @@ if __name__ == "__main__":
                 args.codec,
                 args.tracker_type,
                 "iou-thres-{}".format(args.tracker_iou_thres),
+                "conf-thres-{}".format(args.det_conf_thres),
                 "det-interval-{}".format(args.detector_interval))
     elif args.tracker_type == "deep":
         weights_file_name_date = str.split(args.deep_tracker_weights_file, "/")[-2]
@@ -198,7 +200,7 @@ if __name__ == "__main__":
                 use_only_p_vectors = (args.vector_type == "p")
                 tracker = MotionVectorTrackerBaseline(
                     iou_threshold=args.tracker_iou_thres,
-                    det_conf_threshold=args.det_conf_threshold,
+                    det_conf_threshold=args.det_conf_thres,
                     use_only_p_vectors=use_only_p_vectors, use_numeric_ids=True)
             elif args.tracker_type == "deep":
                 if args.codec == "mpeg4" and args.mvs_mode == "upsampled":
