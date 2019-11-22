@@ -34,14 +34,14 @@ if __name__ == "__main__":
     #video_file = "data/MOT17/train/MOT17-10-FRCNN/MOT17-10-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # val set, moving cam
 
     use_offline_detections = True
-    detections_file = "data/MOT17/test/MOT17-08-SDP/det/det.txt"
+    detections_file = "data/MOT17/test/MOT17-08-DPM/det/det.txt"
 
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
-    detector_interval = 20
+    detector_interval = 6
     tracker_iou_thres = 0.1
-    det_conf_threshold = 0.7
-    state_thresholds = (1, 2, 10)
+    det_conf_threshold = 0.5
+    state_thresholds = (0, 1, 10)
 
     tracker_baseline = MotionVectorTrackerBaseline(
         iou_threshold=tracker_iou_thres,
@@ -51,6 +51,8 @@ if __name__ == "__main__":
         use_numeric_ids=True)
     # tracker_deep = MotionVectorTrackerDeep(
     #     iou_threshold=tracker_iou_thres,
+    #     det_conf_threshold=det_conf_threshold,
+    #     state_thresholds=state_thresholds,
     #     weights_file="models/tracker/2019-10-29_09-35-25/model_lowest_loss.pth",
     #     mvs_mode="upsampled",
     #     vector_type="p",
@@ -60,6 +62,8 @@ if __name__ == "__main__":
     #     use_numeric_ids=True)
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
+        det_conf_threshold=det_conf_threshold,
+        state_thresholds=state_thresholds,
         weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
         mvs_mode="dense",
         vector_type="p+b",
@@ -129,7 +133,7 @@ if __name__ == "__main__":
                 det_boxes = detections['detection_boxes']
                 det_scores = detections['detection_scores']
             tracker_baseline.update(motion_vectors, frame_type, det_boxes, det_scores)
-            tracker_deep.update(motion_vectors, frame_type, det_boxes, frame.shape)
+            tracker_deep.update(motion_vectors, frame_type, det_boxes, det_scores, frame.shape)
             if prev_boxes_baseline is not None:
                frame = draw_boxes(frame, prev_boxes_baseline, color=color_previous_baseline)
             prev_boxes_baseline = np.copy(det_boxes)

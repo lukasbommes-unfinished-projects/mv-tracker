@@ -123,6 +123,8 @@ if __name__ == "__main__":
                 weights_file_name,
                 args.vector_type,
                 "iou-thres-{}".format(args.tracker_iou_thres),
+                "conf-thres-{}".format(args.det_conf_thres),
+                "state-thres-{}-{}-{}".format(*args.state_thres),
                 "det-interval-{}".format(args.detector_interval))
         elif args.codec == "mpeg4":
             output_directory = os.path.join(
@@ -133,6 +135,8 @@ if __name__ == "__main__":
                 args.mvs_mode,
                 weights_file_name,
                 "iou-thres-{}".format(args.tracker_iou_thres),
+                "conf-thres-{}".format(args.det_conf_thres),
+                "state-thres-{}-{}-{}".format(*args.state_thres),
                 "det-interval-{}".format(args.detector_interval))
 
     # if output directory exists exit this process
@@ -222,6 +226,8 @@ if __name__ == "__main__":
                     stats = StatsH264DenseFullSinglescale()
                 tracker = MotionVectorTrackerDeep(
                     iou_threshold=args.tracker_iou_thres,
+                    det_conf_threshold=det_conf_thres,
+                    state_thresholds=tuple(args.state_thres),
                     weights_file=args.deep_tracker_weights_file,
                     mvs_mode=args.mvs_mode,
                     vector_type=args.vector_type,
@@ -256,7 +262,7 @@ if __name__ == "__main__":
                         if args.tracker_type == "baseline":
                             tracker.update(motion_vectors, frame_type, det_boxes[frame_idx]*args.scale, det_scores[frame_idx])
                         elif args.tracker_type == "deep":
-                            tracker.update(motion_vectors, frame_type, det_boxes[frame_idx]*args.scale, frame.shape)
+                            tracker.update(motion_vectors, frame_type, det_boxes[frame_idx]*args.scale, det_scores[frame_idx], frame.shape)
                         dts[sequence_name]["update"].append(time.process_time() - t_start_update)
 
                     # prediction by tracker

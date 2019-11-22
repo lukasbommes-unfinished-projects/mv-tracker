@@ -24,9 +24,11 @@ from lib.utils import load_pretrained_weights
 
 
 class MotionVectorTracker:
-    def __init__(self, iou_threshold, weights_file, mvs_mode, vector_type,
+    def __init__(self, iou_threshold, det_conf_threshold,
+        state_thresholds, weights_file, mvs_mode, vector_type,
         codec, stats, device=None, use_numeric_ids=False):
         self.iou_threshold = iou_threshold
+        self.det_conf_threshold = det_conf_threshold
         self.mvs_mode = mvs_mode
         self.vector_type = vector_type
         self.codec = codec
@@ -35,6 +37,14 @@ class MotionVectorTracker:
         else:
             self.device = device
         self.use_numeric_ids = use_numeric_ids
+
+        self.state_counters = {"missed": [], "redetected": []}
+        self.target_states = []
+
+        # target state transition thresholds
+        self.pending_to_confirmed_thres = state_thresholds[0]
+        self.confirmed_to_pending_thres = state_thresholds[1]
+        self.pending_to_deleted_thres = state_thresholds[2]
 
         self.boxes = np.empty(shape=(0, 4))
         self.box_ids = []
@@ -63,7 +73,7 @@ class MotionVectorTracker:
         self.last_inference_dt = 0
 
 
-    def preprocess_motion_vectors_(self, motion_vectors, frame_shape):
+    def _preprocess_motion_vectors(self, motion_vectors, frame_shape):
         """Preprocesses motion vectors depending on the codec, vector type and mvs_mode."""
         motion_vectors_list = []
         motion_vectors = normalize_vectors(motion_vectors)
@@ -87,7 +97,16 @@ class MotionVectorTracker:
         return motion_vectors_list
 
 
-    def update(self, motion_vectors, frame_type, detection_boxes, frame_shape):
+    def _filter_low_confidence_detections(self, detection_boxes, detection_scores):
+        idx = np.nonzero(detection_scores >= self.det_conf_threshold)
+        detection_boxes[idx]
+        return detection_boxes[idx], detection_scores[idx]
+
+
+    def update(self, motion_vectors, frame_type, detection_boxes, detection_scores, frame_shape):
+        # remove detections with confidence lower than det_conf_threshold
+        if self.det_conf_threshold is not None:
+            detection_boxes, detection_scores = self._filter_low_confidence_detections(detection_boxes, detection_scores)
 
         # bring boxes into next state
         self.predict(motion_vectors, frame_type, frame_shape)
@@ -95,17 +114,23 @@ class MotionVectorTracker:
         # match predicted (tracked) boxes with detected boxes
         matches, unmatched_trackers, unmatched_detectors = trackerlib.match_bounding_boxes(self.boxes, detection_boxes, self.iou_threshold)
 
-        #print("####")
-        #print("unmatched_trackers", unmatched_trackers, [str(self.box_ids[t])[:6] for t in unmatched_trackers])
-        #print("unmatched_detectors", unmatched_detectors)
-
-        # handle matches
+        # handle matches by incremeting the counter for redetection and resetting the one for lost
         for d, t in matches:
+            self.state_counters["missed"][t] = 0  # reset lost counter
+            self.state_counters["redetected"][t] += 1  # increment redetection counter
             self.boxes[t] = detection_boxes[d]
-            #print("Matched tracker {} with detector {}".format(str(self.box_ids[t])[:6], d))
+            # update target state based on counter values
+            if self.state_counters["redetected"][t] >= self.pending_to_confirmed_thres:
+                self.target_states[t] = "confirmed"
 
-        # handle unmatched detections by spawning new trackers
+        # handle unmatched detections by spawning new trackers in pending state
         for d in unmatched_detectors:
+            self.state_counters["missed"].append(0)
+            self.state_counters["redetected"].append(0)
+            if self.pending_to_confirmed_thres > 0:
+                self.target_states.append("pending")
+            elif self.pending_to_confirmed_thres == 0:
+                self.target_states.append("confirmed")
             if self.use_numeric_ids:
                 self.box_ids.append(self.next_id)
                 self.next_id += 1
@@ -113,24 +138,31 @@ class MotionVectorTracker:
                 uid = uuid.uuid4()
                 self.box_ids.append(uid)
             self.boxes = np.vstack((self.boxes, detection_boxes[d]))
-            #print("Created new tracker {} for detector {}".format(str(uid)[:6], d))
 
-        # handle unmatched tracker predictions by removing trackers
+        # handle unmatched tracker predictions by counting how often a target got lost subsequently
         for t in unmatched_trackers:
-            #print("Removed tracker {}".format(str(self.box_ids[t])[:6]))
-            self.boxes = np.delete(self.boxes, t, axis=0)
-            self.box_ids.pop(t)
+            self.state_counters["missed"][t] += 1
+            self.state_counters["redetected"][t] = 0
+            # if target is not redetected for confirmed_to_pending_thres cosecutive times set its state to pending
+            if self.state_counters["missed"][t] > self.confirmed_to_pending_thres:
+                self.target_states[t] = "pending"
+            #   if target is not redetected for pending_to_deleted_thres cosecutive times delete it
+            if self.state_counters["missed"][t] > self.pending_to_deleted_thres:
+                self.boxes = np.delete(self.boxes, t, axis=0)
+                self.box_ids.pop(t)
+                self.state_counters["missed"].pop(t)
+                self.state_counters["redetected"].pop(t)
+                self.target_states.pop(t)
 
 
     def predict(self, motion_vectors, frame_type, frame_shape):
-
         # if there are no boxes skip prediction step
         if np.shape(self.boxes)[0] == 0:
             return
 
         # I frame has no motion vectors
         if frame_type != "I":
-            motion_vectors = self.preprocess_motion_vectors_(motion_vectors, (frame_shape[1], frame_shape[0]))
+            motion_vectors = self._preprocess_motion_vectors(motion_vectors, (frame_shape[1], frame_shape[0]))
             # motion vectors is now a list of tensors where the first item is the P vectors and the second item the B vectors
 
             sample = self.standardize_motion_vectors({"motion_vectors": motion_vectors})
@@ -200,8 +232,12 @@ class MotionVectorTracker:
 
 
     def get_boxes(self):
-        return self.boxes
+        # get only those boxes with state "confirmed"
+        mask = [target_state == "confirmed" for target_state in self.target_states]
+        boxes_filtered = self.boxes[mask]
+        return boxes_filtered
 
 
     def get_box_ids(self):
-        return self.box_ids
+        box_ids_filtered = [box_id for box_id, target_state in zip(self.box_ids, self.target_states) if target_state == "confirmed"]
+        return box_ids_filtered
