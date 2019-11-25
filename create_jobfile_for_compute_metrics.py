@@ -85,7 +85,7 @@ sequence_locations = {
     "MOT16-07": "MOT16/test",
     "MOT16-08": "MOT16/test",
     "MOT16-12": "MOT16/test",
-    "MOT16-14": "MOT16/test",    
+    "MOT16-14": "MOT16/test",
     "ADL-Rundle-6": "MOT15/train",
     "ADL-Rundle-8": "MOT15/train",
     "ETH-Bahnhof": "MOT15/train",
@@ -123,7 +123,10 @@ if __name__ == "__main__":
         for eval_path, files in path_info:
 
             # remove "time_perf.log" from files
-            files.remove("time_perf.log")
+            try:
+                files.remove("time_perf.log")
+            except ValueError:
+                pass
 
             # strip of file extension from files
             for i in range(len(files)):

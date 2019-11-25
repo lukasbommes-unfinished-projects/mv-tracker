@@ -5,7 +5,7 @@ import pandas as pd
 
 
 eval_dir = "eval_output/custom"  # the directory containing evaluation results
-outfile = "eval_output/parsed_data.csv" # where to write the parsed dataframe
+outfile = "parsed_eval_results.csv" # where to write the parsed dataframe
 
 if __name__ == "__main__":
 
@@ -128,11 +128,7 @@ if __name__ == "__main__":
 
         data.append(row)
 
-        print("####")
-        print(eval_path)
-        print([scale, codec, tracker_type, mvs_mode, weights_file,
-               vector_type, iou_thres, conf_thres, state_thres, det_interval])
-
     df = pd.DataFrame(data, columns=df_variables+df_mot_metrics)
 
     df.to_csv(outfile)
+    print("Wrote output file to {}".format(outfile))

@@ -143,12 +143,12 @@ if __name__ == "__main__":
     try:
         os.makedirs(output_directory)
     except FileExistsError:
-        #print("Output directory {} exists. Skipping.".format(output_directory))
-        #exit()
-        try:
-            os.remove(os.path.join(output_directory, "time_perf.log"))
-        except OSError:
-            pass
+        print("Output directory {} exists. Skipping.".format(output_directory))
+        exit()
+        #try:
+        #    os.remove(os.path.join(output_directory, "time_perf.log"))
+        #except OSError:
+        #    pass
 
     print("Created output directory {}".format(output_directory))
 
