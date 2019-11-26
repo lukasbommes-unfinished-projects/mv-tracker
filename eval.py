@@ -143,12 +143,12 @@ if __name__ == "__main__":
     try:
         os.makedirs(output_directory)
     except FileExistsError:
-        print("Output directory {} exists. Skipping.".format(output_directory))
-        exit()
-        #try:
-        #    os.remove(os.path.join(output_directory, "time_perf.log"))
-        #except OSError:
-        #    pass
+        #print("Output directory {} exists. Skipping.".format(output_directory))
+        #exit()
+        try:
+            os.remove(os.path.join(output_directory, "time_perf.log"))
+        except OSError:
+            pass
 
     print("Created output directory {}".format(output_directory))
 
@@ -214,7 +214,9 @@ if __name__ == "__main__":
                     iou_threshold=args.tracker_iou_thres,
                     det_conf_threshold=det_conf_thres,
                     state_thresholds=tuple(args.state_thres),
-                    use_only_p_vectors=use_only_p_vectors, use_numeric_ids=True)
+                    use_only_p_vectors=use_only_p_vectors,
+                    use_numeric_ids=True,
+                    measure_timing=True)
             elif args.tracker_type == "deep":
                 if args.codec == "mpeg4" and args.mvs_mode == "upsampled":
                     stats = StatsMpeg4UpsampledFullSinglescale()
@@ -234,7 +236,8 @@ if __name__ == "__main__":
                     codec=args.codec,
                     stats=stats,
                     device=device,
-                    use_numeric_ids=True)
+                    use_numeric_ids=True,
+                    measure_timing=True)
 
             print("Computing {} metrics for sequence {}".format(args.benchmark, sequence_name))
 
@@ -258,23 +261,21 @@ if __name__ == "__main__":
 
                     # update with detections
                     if frame_idx % args.detector_interval == 0:
-                        t_start_update = time.process_time()
                         if args.tracker_type == "baseline":
                             tracker.update(motion_vectors, frame_type, det_boxes[frame_idx]*args.scale, det_scores[frame_idx])
                         elif args.tracker_type == "deep":
                             tracker.update(motion_vectors, frame_type, det_boxes[frame_idx]*args.scale, det_scores[frame_idx], frame.shape)
-                        dts[sequence_name]["update"].append(time.process_time() - t_start_update)
+                        dts[sequence_name]["update"].append(tracker.last_update_dt)
 
                     # prediction by tracker
                     else:
-                        t_start_predict = time.process_time()
                         if args.tracker_type == "baseline":
                             tracker.predict(motion_vectors, frame_type)
                             dts[sequence_name]["inference"].append(np.nan)
                         elif args.tracker_type == "deep":
                             tracker.predict(motion_vectors, frame_type, frame.shape)
                             dts[sequence_name]["inference"].append(tracker.last_inference_dt)
-                        dts[sequence_name]["predict"].append(time.process_time() - t_start_predict)
+                        dts[sequence_name]["predict"].append(tracker.last_predict_dt)
 
                     dts[sequence_name]["total"].append(time.process_time() - t_start_total)
 

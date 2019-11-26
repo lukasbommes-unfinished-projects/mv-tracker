@@ -1,4 +1,3 @@
-import time
 import pickle
 import uuid
 from collections import OrderedDict
@@ -26,7 +25,8 @@ from lib.utils import load_pretrained_weights
 class MotionVectorTracker:
     def __init__(self, iou_threshold, det_conf_threshold,
         state_thresholds, weights_file, mvs_mode, vector_type,
-        codec, stats, device=None, use_numeric_ids=False):
+        codec, stats, device=None, use_numeric_ids=False,
+        measure_timing=False):
         self.iou_threshold = iou_threshold
         self.det_conf_threshold = det_conf_threshold
         self.mvs_mode = mvs_mode
@@ -70,7 +70,10 @@ class MotionVectorTracker:
         self.model.eval()
 
         # for timing analaysis
-        self.last_inference_dt = 0
+        self.measure_timing = measure_timing
+        self.last_inference_dt = np.inf
+        self.last_predict_dt = np.inf
+        self.last_update_dt = np.inf
 
 
     def _preprocess_motion_vectors(self, motion_vectors, frame_shape):
@@ -104,6 +107,11 @@ class MotionVectorTracker:
 
 
     def update(self, motion_vectors, frame_type, detection_boxes, detection_scores, frame_shape):
+        if self.measure_timing:
+            start_update = torch.cuda.Event(enable_timing=True)
+            end_update = torch.cuda.Event(enable_timing=True)
+            start_update.record()
+
         # remove detections with confidence lower than det_conf_threshold
         if self.det_conf_threshold is not None:
             detection_boxes, detection_scores = self._filter_low_confidence_detections(detection_boxes, detection_scores)
@@ -154,8 +162,18 @@ class MotionVectorTracker:
                 self.state_counters["redetected"].pop(t)
                 self.target_states.pop(t)
 
+        if self.measure_timing:
+            end_update.record()
+            torch.cuda.synchronize()
+            self.last_update_dt = start_update.elapsed_time(end_update) / 1000.0
+
 
     def predict(self, motion_vectors, frame_type, frame_shape):
+        if self.measure_timing:
+            start_predict = torch.cuda.Event(enable_timing=True)
+            end_predict = torch.cuda.Event(enable_timing=True)
+            start_predict.record()
+
         # if there are no boxes skip prediction step
         if np.shape(self.boxes)[0] == 0:
             return
@@ -202,13 +220,19 @@ class MotionVectorTracker:
 
         # feed into model, retrieve output
         with torch.set_grad_enabled(False):
-            t_start_inference = time.process_time()
+            if self.measure_timing:
+                start_inference = torch.cuda.Event(enable_timing=True)
+                end_inference = torch.cuda.Event(enable_timing=True)
+                start_inference.record()
             if self.mvs_mode == "upsampled":
                 velocities_pred = self.model(motion_vectors_p, boxes_prev_)
             elif self.mvs_mode == "dense":
                 velocities_pred = self.model(motion_vectors_p, motion_vectors_b,
                     boxes_prev_)
-            self.last_inference_dt = time.process_time() - t_start_inference
+            if self.measure_timing:
+                end_inference.record()
+                torch.cuda.synchronize()
+                self.last_inference_dt = start_inference.elapsed_time(end_inference) / 1000.0
 
             # make sure output is on CPU
             velocities_pred = velocities_pred.cpu()
@@ -229,6 +253,11 @@ class MotionVectorTracker:
             self.boxes = box_from_velocities(boxes_prev, velocities_pred).numpy()
         elif self.mvs_mode == "dense":
             self.boxes = box_from_velocities_2d(boxes_prev, velocities_pred).numpy()
+
+        if self.measure_timing:
+            end_predict.record()
+            torch.cuda.synchronize()
+            self.last_predict_dt = start_predict.elapsed_time(end_predict) / 1000.0
 
 
     def get_boxes(self):

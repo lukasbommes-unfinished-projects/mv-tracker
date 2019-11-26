@@ -1,3 +1,4 @@
+import time
 import uuid
 
 import numpy as np
@@ -11,7 +12,7 @@ from mvt.utils import draw_motion_vectors, draw_boxes
 class MotionVectorTracker:
     def __init__(self, iou_threshold, det_conf_threshold,
         state_thresholds, use_only_p_vectors=False, use_kalman=False,
-        use_numeric_ids=False):
+        use_numeric_ids=False, measure_timing=False):
         self.iou_threshold = iou_threshold
         self.det_conf_threshold = det_conf_threshold
         self.use_only_p_vectors = use_only_p_vectors
@@ -32,6 +33,11 @@ class MotionVectorTracker:
         self.confirmed_to_pending_thres = state_thresholds[1]
         self.pending_to_deleted_thres = state_thresholds[2]
 
+        # for timing analaysis
+        self.measure_timing = measure_timing
+        self.last_predict_dt = np.inf
+        self.last_update_dt = np.inf
+
 
     def _filter_low_confidence_detections(self, detection_boxes, detection_scores):
         idx = np.nonzero(detection_scores >= self.det_conf_threshold)
@@ -40,6 +46,9 @@ class MotionVectorTracker:
 
 
     def update(self, motion_vectors, frame_type, detection_boxes, detection_scores):
+        if self.measure_timing:
+            start_update = time.perf_counter()
+
         # remove detections with confidence lower than det_conf_threshold
         if self.det_conf_threshold is not None:
             detection_boxes, detection_scores = self._filter_low_confidence_detections(detection_boxes, detection_scores)
@@ -102,8 +111,14 @@ class MotionVectorTracker:
                 if self.use_kalman:
                     self.filters.pop(t)
 
+        if self.measure_timing:
+            self.last_update_dt = time.perf_counter() - start_update
+
 
     def predict(self, motion_vectors, frame_type):
+        if self.measure_timing:
+            start_predict = time.perf_counter()
+
         # I frame has no motion vectors
         if frame_type != "I":
 
@@ -125,6 +140,9 @@ class MotionVectorTracker:
                  self.filters[t].predict()
                  self.filters[t].update(self.boxes[t])
                  self.boxes[t] = self.filters[t].get_box_from_state()
+
+        if self.measure_timing:
+            self.last_predict_dt = time.perf_counter() - start_predict
 
 
     def get_boxes(self):

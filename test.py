@@ -48,29 +48,32 @@ if __name__ == "__main__":
         det_conf_threshold=det_conf_threshold,
         state_thresholds=state_thresholds,
         use_only_p_vectors=False,
-        use_numeric_ids=True)
-    # tracker_deep = MotionVectorTrackerDeep(
-    #     iou_threshold=tracker_iou_thres,
-    #     det_conf_threshold=det_conf_threshold,
-    #     state_thresholds=state_thresholds,
-    #     weights_file="models/tracker/2019-10-29_09-35-25/model_lowest_loss.pth",
-    #     mvs_mode="upsampled",
-    #     vector_type="p",
-    #     codec=codec,
-    #     stats=StatsMpeg4UpsampledFullSinglescale,
-    #     device=torch.device("cuda:0"),
-    #     use_numeric_ids=True)
+        use_numeric_ids=True,
+        measure_timing=True)
     tracker_deep = MotionVectorTrackerDeep(
         iou_threshold=tracker_iou_thres,
         det_conf_threshold=det_conf_threshold,
         state_thresholds=state_thresholds,
-        weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
-        mvs_mode="dense",
-        vector_type="p+b",
+        weights_file="models/tracker/2019-10-30_02-47-42/model_highest_iou.pth",
+        mvs_mode="upsampled",
+        vector_type="p",
         codec=codec,
-        stats=StatsH264DenseFullSinglescale,
+        stats=StatsMpeg4UpsampledFullSinglescale,
         device=torch.device("cuda:0"),
-        use_numeric_ids=True)
+        use_numeric_ids=True,
+        measure_timing=True)
+    # tracker_deep = MotionVectorTrackerDeep(
+    #     iou_threshold=tracker_iou_thres,
+    #     det_conf_threshold=det_conf_threshold,
+    #     state_thresholds=state_thresholds,
+    #     weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
+    #     mvs_mode="dense",
+    #     vector_type="p+b",
+    #     codec=codec,
+    #     stats=StatsH264DenseFullSinglescale,
+    #     device=torch.device("cuda:0"),
+    #     use_numeric_ids=True,
+    #     measure_timing=True)
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
@@ -126,8 +129,8 @@ if __name__ == "__main__":
         # update with detections
         if frame_idx % detector_interval == 0:
             if use_offline_detections:
-                det_boxes = det_boxes_all[frame_idx]
-                det_scores = det_scores_all[frame_idx]
+                det_boxes = det_boxes_all[frame_idx] * scaling_factor
+                det_scores = det_scores_all[frame_idx] * scaling_factor
             else:
                 detections = detector.detect(frame)
                 det_boxes = detections['detection_boxes']
@@ -164,9 +167,16 @@ if __name__ == "__main__":
             frame = draw_box_ids(frame, track_boxes_baseline, box_ids_baseline, color=color_tracker_baseline)
             frame = draw_box_ids(frame, track_boxes_deep, box_ids_deep, color=color_tracker_deep)
 
-
         frame = draw_boxes(frame, det_boxes, color=color_detection)
         frame = draw_scores(frame, det_boxes, det_scores, color=color_detection)
+
+        # print FPS
+        print("### FPS ###")
+        print("Baseline: Predict {}, Update {}".format(
+            1/tracker_baseline.last_predict_dt, 1/tracker_baseline.last_update_dt))
+        print("Deep: Predict {}, Update {}, Inference {}".format(
+            1/tracker_deep.last_predict_dt, 1/tracker_deep.last_update_dt,
+            1/tracker_deep.last_inference_dt))
 
         frame_idx += 1
         cv2.imshow("frame", frame)
