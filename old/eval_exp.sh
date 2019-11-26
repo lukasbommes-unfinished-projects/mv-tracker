@@ -196,33 +196,134 @@ VAL_SEQUENCES=('MOT17/train/MOT17-09-DPM'
 # python eval.py --benchmark="MOT17" --mode="train" --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.3 --detector_interval=2 --det_conf_thres=0.3 --state_thres 2 2 10 --root_dir=$ROOT_DIR --repeats=1   # 44.8
 # python eval.py --benchmark="MOT17" --mode="train" --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.3 --detector_interval=2 --det_conf_thres=0.3 --state_thres 2 3 10 --root_dir=$ROOT_DIR --repeats=1   # 44.7
 
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 39.2 <-
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 34.6
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 27.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 39.2 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 34.6
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=20 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 27.0
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 41.5 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 39.1
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 33.6
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 45.0 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 44.6
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 41.8
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 46.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 46.5 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 44.6
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 46.9
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 48.0 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 47.0
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 47.3
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 49.0 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 48.7
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 47.4
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 49.1
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 49.8 <-
 
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 41.5 <-
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 39.1
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=15 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 33.6
 
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 45.0 <-
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 44.6
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=10 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 41.8
+########################### Hyperparameter Tuning for MOT17 ###########################
 
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 46.0
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 46.5 <-
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=8 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 44.6
+# procedure: first find good values for det_conf_thres and state_thres, then try all detector_intervals with those values
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=-1 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1     # 40.5
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.1 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.3
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.2 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.3
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.4 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.5 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.4
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.6 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.5
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.8 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 42.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.9 --state_thres 0 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 42.1
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=-1 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1     # 37.6
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.1 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.5 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.2 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.6 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.6 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.4 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.4 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.5 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.4 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.6 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.1
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.8 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.3
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.9 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.7
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=-1 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1     # 34.6
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.1 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.2 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.1
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.2
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.4 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.2
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.5 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.3
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.6 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.3
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.8 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.9 --state_thres 0 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.3
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=-1 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1     # 40.9
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.1 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.2 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.6
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.3
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.4 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.5 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.6
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.6 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 42.5
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.8 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 41.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.9 --state_thres 1 0 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 41.0
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=-1 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1     # 38.9
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.1 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.1
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.2 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.2
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.4 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.5 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.6
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.6 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.2
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.8 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.2
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.9 --state_thres 1 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 42.5
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=-1 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1     # 36.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.1 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.2 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.9
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.4 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.5 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.6 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.4
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.8 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.9 --state_thres 1 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.1
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=-1 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1     # 39.2
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.1 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.1
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.2 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.4 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.5
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.5 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.2
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.6 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 42.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 42.4
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.8 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 41.9
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.9 --state_thres 2 2 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 41.1
 
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 46.9
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 48.0 <-
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=6 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 47.0
+# todo: find best parameter combination abvoe and try tracker_iou_thres = 0.3 and try all detector intervals
 
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 47.3
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 49.0 <-
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=4 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 48.7
-
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 0 10 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 47.4
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 1 10 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 49.1
-python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.7 --state_thres 0 2 10 --detector_interval=2 --root_dir=$ROOT_DIR --sequences ${VAL_SEQUENCES[*]} --repeats=1  # 49.8 <-
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.3 --det_conf_thres=0.2 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.4
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.3 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=3 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.4
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=20 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1   # 34.0
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=15 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1   # 37.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=10 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1   # 41.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=8 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 43.4
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=6 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 44.5
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=4 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.4
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=2 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 1 10 --detector_interval=1 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.5
+#
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 0 10 --detector_interval=20 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1   # 38.7
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 0 10 --detector_interval=15 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1   # 40.9
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 0 10 --detector_interval=10 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1   # 43.1
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 2 10 --detector_interval=2 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.8
+# python eval.py --codec=mpeg4 --tracker_type=baseline --tracker_iou_thres=0.1 --det_conf_thres=0.3 --state_thres 0 2 10 --detector_interval=1 --root_dir=$ROOT_DIR --benchmark="MOT17" --mode="train" --repeats=1    # 45.6
 
 ########################### Create Jobfile (DO NOT EDIT) ###########################
 python create_jobfile_for_compute_metrics.py

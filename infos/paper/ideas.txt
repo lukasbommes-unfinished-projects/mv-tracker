@@ -1,0 +1,39 @@
+Run detector on I frames or after fixed time interval
+
+
+Novelties compared to Liu 2019:
+- Variable spacing between motion vectors as in H.264 -> interpolate on regular grid
+- Explicit handling of B vectors -> use additional input channels for B vectors
+- Handling of variable key frame intervals -> input frame type (I, P/B) into NN as kind of a switch
+
+
+Other ideas:
+- compare different propagation networks with each other
+  - simple CNN based approach which looks back in time only 1 step
+  - CNN-LSTM which looks back in time for w time steps
+  - 3D-CNN which looks back in time for w time steps
+
+
+Three different methods for bbox propagation:
+ 1) Baseline: Shift boxes by the average of contained motion vectors
+ 2) Deep w. full MVS image: motion vectors are of same size as the frame
+ 3) Deep w. compact MVS: compact representation of motion vectors is used
+
+
+Ideas for the paper (experiments)
+- instead of scaling motion vctor images, scale source video prior to MV extraction to different scales for data augmentation
+- try HSV color space for motion vectors instead of BGR colorspace
+- compare H.264 encoded with MPEG4 encoded video (compare different encoder settings)
+- compare one method which uses the HD motion vector image vs. a method which uses the compressed motion vectors in terms of accuracy and speed (MOT metrics and frame rate)
+- test 4 channel MVS with B and P vectors split into individual channels vs. only P vectors (only for H.264 possible)
+- test whether weighting the loss with the box size helps improve performance
+- test whether removing the I frames from training data increases performance
+- test whether accuracy increases when removing training data with moving camera
+- develop a method to cope with moving camera
+- compare different methods to model temporal dependency (accumulated MVS like in COVIAR vs. using an LSTM)
+- try data augmentation for training (rotate, translate and scale the motion vectors and boxes accordingly)
+- try manual noise removal in the motion vector image
+- [try different motion vector normalization (first, convert into range [0, 1], then subtract mean and std of ImageNet]
+- [compare performance of my tool vs. COVIAR]
+
+-> always compare in terms of MOT metrics and FPS
