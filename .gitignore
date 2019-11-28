@@ -26,3 +26,5 @@ __pycache__/
 old/eval_output/
 /eval_output_bak/
 /old/old_eval/
+/eval_output_mvt_original/
+/eval_output_mvt_using_dst/

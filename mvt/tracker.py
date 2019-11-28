@@ -6,7 +6,6 @@ import cv2
 import pickle
 
 from mvt import trackerlib
-from mvt.utils import draw_motion_vectors, draw_boxes
 
 
 class MotionVectorTracker:

@@ -2,20 +2,6 @@ import cv2
 import numpy as np
 
 
-def motion_vectors_to_image(motion_vectors):
-    mvs = motion_vectors.numpy()
-    image = np.zeros((mvs.shape[1], mvs.shape[2], 3))
-    # scale the components to range [0, 1]
-    mvs_min = np.min(mvs, axis=(1, 2))
-    mvs_max = np.max(mvs, axis=(1, 2))
-    if (mvs_max[0] - mvs_min[0]) != 0 and (mvs_max[1] - mvs_min[1]) != 0:
-        mvs_x = (mvs[0, :, :] - mvs_min[0]) / (mvs_max[0] - mvs_min[0])
-        mvs_y = (mvs[1, :, :] - mvs_min[1]) / (mvs_max[1] - mvs_min[1])
-        image[:, :, 2] = mvs_x
-        image[:, :, 1] = mvs_y
-    return image
-
-
 def draw_boxes_on_motion_vector_image(mvs_image, bounding_boxes, color=(255, 255, 255)):
     for box in bounding_boxes:
         xmin = int(box[0])
@@ -68,22 +54,17 @@ def draw_macroblocks(frame, motion_vectors, alpha=1.0):
     return frame_overlay
 
 
-def draw_boxes(frame, bounding_boxes, box_ids=None, color=(0, 255, 0)):
-    if box_ids is not None:
-        for box, box_id in zip(bounding_boxes, box_ids):
-            xmin = int(box[0])
-            ymin = int(box[1])
-            xmax = int(box[0] + box[2])
-            ymax = int(box[1] + box[3])
-            frame = cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2, cv2.LINE_4)
-            frame = cv2.putText(frame, '{}'.format(str(box_id)[:6]), (xmin, ymin+20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2, cv2.LINE_AA)
-    else:
-        for box in bounding_boxes:
-            xmin = int(box[0])
-            ymin = int(box[1])
-            xmax = int(box[0] + box[2])
-            ymax = int(box[1] + box[3])
-            frame = cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2, cv2.LINE_4)
+def draw_boxes(frame, bounding_boxes, box_ids=None, scores=None, color=(0, 255, 0)):
+    for i, box in enumerate(bounding_boxes):
+        xmin = int(box[0])
+        ymin = int(box[1])
+        xmax = int(box[0] + box[2])
+        ymax = int(box[1] + box[3])
+        frame = cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2, cv2.LINE_4)
+        if box_ids is not None:
+            frame = cv2.putText(frame, '{}'.format(str(box_ids[i])[:6]), (xmin, ymin+20), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2, cv2.LINE_AA)
+        if scores is not None:
+            frame = cv2.putText(frame, '{}'.format(str(scores[i])), (xmin, ymin-5), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color, 2, cv2.LINE_AA)
     return frame
 
 

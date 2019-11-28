@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 
 from video_cap import VideoCap
-from mvt.utils import draw_motion_vectors, draw_boxes, draw_box_ids, draw_scores
+from lib.visu import draw_motion_vectors, draw_boxes
 
 from detector import DetectorTF
 from lib.dataset.loaders import load_detections
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     detector_path = "models/detector/faster_rcnn_resnet50_coco_2018_01_28/frozen_inference_graph.pb"  # detector frozen inferenze graph (*.pb)
     detector_box_size_thres = None #(0.25*1920, 0.6*1080) # discard detection boxes larger than this threshold
-    detector_interval = 6
+    detector_interval = 20
     tracker_iou_thres = 0.1
     det_conf_threshold = 0.5
     state_thresholds = (0, 1, 10)
@@ -50,30 +50,30 @@ if __name__ == "__main__":
         use_only_p_vectors=False,
         use_numeric_ids=True,
         measure_timing=True)
-    tracker_deep = MotionVectorTrackerDeep(
-        iou_threshold=tracker_iou_thres,
-        det_conf_threshold=det_conf_threshold,
-        state_thresholds=state_thresholds,
-        weights_file="models/tracker/2019-10-30_02-47-42/model_highest_iou.pth",
-        mvs_mode="upsampled",
-        vector_type="p",
-        codec=codec,
-        stats=StatsMpeg4UpsampledFullSinglescale,
-        device=torch.device("cuda:0"),
-        use_numeric_ids=True,
-        measure_timing=True)
     # tracker_deep = MotionVectorTrackerDeep(
     #     iou_threshold=tracker_iou_thres,
     #     det_conf_threshold=det_conf_threshold,
     #     state_thresholds=state_thresholds,
-    #     weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
-    #     mvs_mode="dense",
-    #     vector_type="p+b",
+    #     weights_file="models/tracker/2019-10-30_02-47-42/model_highest_iou.pth",
+    #     mvs_mode="upsampled",
+    #     vector_type="p",
     #     codec=codec,
-    #     stats=StatsH264DenseFullSinglescale,
+    #     stats=StatsMpeg4UpsampledFullSinglescale,
     #     device=torch.device("cuda:0"),
     #     use_numeric_ids=True,
     #     measure_timing=True)
+    tracker_deep = MotionVectorTrackerDeep(
+        iou_threshold=tracker_iou_thres,
+        det_conf_threshold=det_conf_threshold,
+        state_thresholds=state_thresholds,
+        weights_file="models/tracker/2019-11-19_16-16-13/model_highest_iou.pth",
+        mvs_mode="dense",
+        vector_type="p+b",
+        codec=codec,
+        stats=StatsH264DenseFullSinglescale,
+        device=torch.device("cuda:0"),
+        use_numeric_ids=True,
+        measure_timing=True)
 
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("frame", 640, 360)
@@ -114,7 +114,7 @@ if __name__ == "__main__":
             break
 
         # draw entire field of motion vectors
-        frame = draw_motion_vectors(frame, motion_vectors)
+        frame = draw_motion_vectors(frame, motion_vectors, format="numpy")
 
         # draw info
         frame = cv2.putText(frame, "Frame Type: {}".format(frame_type), (1000, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2, cv2.LINE_AA)
@@ -162,13 +162,10 @@ if __name__ == "__main__":
                frame = draw_boxes(frame, prev_boxes_deep, color=color_previous_deep)
             prev_boxes_deep = np.copy(track_boxes_deep)
 
-            frame = draw_boxes(frame, track_boxes_baseline, color=color_tracker_baseline)
-            frame = draw_boxes(frame, track_boxes_deep, color=color_tracker_deep)
-            frame = draw_box_ids(frame, track_boxes_baseline, box_ids_baseline, color=color_tracker_baseline)
-            frame = draw_box_ids(frame, track_boxes_deep, box_ids_deep, color=color_tracker_deep)
+            frame = draw_boxes(frame, track_boxes_baseline, box_ids=box_ids_baseline, color=color_tracker_baseline)
+            frame = draw_boxes(frame, track_boxes_deep, box_ids=box_ids_deep, color=color_tracker_deep)
 
-        frame = draw_boxes(frame, det_boxes, color=color_detection)
-        frame = draw_scores(frame, det_boxes, det_scores, color=color_detection)
+        frame = draw_boxes(frame, det_boxes, scores=det_scores, color=color_detection)
 
         # print FPS
         print("### FPS ###")

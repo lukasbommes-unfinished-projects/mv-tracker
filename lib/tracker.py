@@ -10,7 +10,6 @@ import cv2
 import sys
 sys.path.append("..")
 from mvt import trackerlib
-from mvt.utils import draw_motion_vectors, draw_boxes
 
 from lib.models.pnet_upsampled import PropagationNetwork as PropagationNetworkUpsampled
 from lib.models.pnet_dense import PropagationNetwork as PropagationNetworkDense
