@@ -23,7 +23,7 @@ from lib.dataset.stats import StatsMpeg4DenseStaticSinglescale, \
 if __name__ == "__main__":
 
     scaling_factor = 1.0
-    codec = "mpeg4"
+    codec = "h264"
 
     # reminder: when evaluating h264 models, use h264 videos
     #video_file = "data/MOT17/train/MOT17-02-FRCNN/MOT17-02-FRCNN-{}-{}.mp4".format(codec, scaling_factor)  # train set, static cam

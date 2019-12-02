@@ -147,10 +147,20 @@ def get_vectors_in_boxes(motion_vectors, boxes):
             ymin = box[1]
             ymax = box[1] + box [3]
             # get (x_src, y_src) considering possible scaling during normalization
-            src_x = motion_vectors[:, 5] - motion_vectors[:, 0] * motion_vectors[:, 7] / motion_vectors[:, 9]
-            src_y = motion_vectors[:, 6] - motion_vectors[:, 0] * motion_vectors[:, 8] / motion_vectors[:, 9]
-            #dst_x = motion_vectors[:, 5]
-            #dst_y = motion_vectors[:, 6]
+            src_x = motion_vectors[:, 5] + (motion_vectors[:, 0] * motion_vectors[:, 7] / motion_vectors[:, 9])
+            src_y = motion_vectors[:, 6] + (motion_vectors[:, 0] * motion_vectors[:, 8] / motion_vectors[:, 9])
+            # src_x = src_x.astype(np.int)  # convert to int for higher speed
+            # src_y = src_y.astype(np.int)
+            # print("###")
+            # term_at_test = (motion_vectors[:, 0] * motion_vectors[:, 7] / motion_vectors[:, 9])
+            # print(term_at_test[-50:])
+            # print("estimated src_x", src_x[-50:])
+            # print("src_x:", motion_vectors[:, 3][-50:])
+            # print("source:", motion_vectors[:, 0][-50:])
+            # print("dst_x:", motion_vectors[:, 5][-50:])
+            # print("mx:", motion_vectors[:, 7][-50:])
+            # print("ms:", motion_vectors[:, 9][-50:])
+
             # get indices of vectors inside the box
             idx = np.where(np.logical_and(
                 np.logical_and(src_x >= xmin, src_x <= xmax),

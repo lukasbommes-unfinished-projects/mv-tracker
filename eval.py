@@ -50,6 +50,8 @@ python eval.py --codec=h264 --vector_type=p --tracker_type=baseline --tracker_io
 
     parser.add_argument('--benchmark', type=str, help='Either "MOT16" or "MOT17". Determines which detections are loaded.', default='MOT17')
     parser.add_argument('--mode', type=str, help='Either "train" or "test". Whether to compute metrics on train or test split of MOT data.', default='train')
+    parser.add_argument('--mot16_use_frcnn_detections', dest='mot16_use_frcnn_detections', help='Use more accurate Faster R-CNN detections instead of DPMv5 detections during MOT16 evaluation', action='store_true')
+    parser.set_defaults(mot16_use_frcnn_detections=False)
     parser.add_argument('--sequences', nargs='+', type=str, help='Compute boxes on the specified sequences only. If provided settings for benchmark and mode are ignored.')
     parser.add_argument('--scale', type=float, help='Scaling factor for the input sequence relative to the original sequence, e.g. if original sequence is 1920 x 1080, but was reencoded to 960 x 540 then scale is 0.5.', default=1.0)
     parser.add_argument('--codec', type=str, help='Either "mpeg4" or "h264" determines the encoding type of the video.', default='mpeg4')
@@ -84,7 +86,13 @@ if __name__ == "__main__":
         output_directory_root = os.path.join('eval_output', "custom")
     else:
         data_dirs = sorted(glob.glob(os.path.join(args.root_dir, args.benchmark, "{}/*".format(args.mode))))
-        output_directory_root = os.path.join('eval_output', args.benchmark, args.mode)
+        if args.benchmark == "MOT16":
+            if args.mot16_use_frcnn_detections:
+                output_directory_root = os.path.join('eval_output', "MOT16", "FRCNN", args.mode)
+            else:
+                output_directory_root = os.path.join('eval_output', "MOT16", "DPMv5", args.mode)
+        elif args.benchmark == "MOT17":
+            output_directory_root = os.path.join('eval_output', args.benchmark, args.mode)
 
     # generate output directory
     if args.tracker_type == "baseline":
@@ -175,7 +183,11 @@ if __name__ == "__main__":
 
         for data_dir in data_dirs:
             num_frames = len(glob.glob(os.path.join(data_dir, 'img1/*.jpg')))
-            det_boxes, det_scores = load_detections(os.path.join(data_dir, 'det/det.txt'), num_frames)
+            if args.benchmark == "MOT16" and args.mot16_use_frcnn_detections:
+                det_file = os.path.join(data_dir, 'det_FRCNN/det.txt')
+            else:
+                det_file = os.path.join(data_dir, 'det/det.txt')
+            det_boxes, det_scores = load_detections(det_file, num_frames)
             sequence_name = data_dir.split('/')[-1]
             sequence_path = '/'.join(data_dir.split('/')[:-1])
             detector_name = sequence_name.split('-')[-1]
