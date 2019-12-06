@@ -1,8 +1,0 @@
-- use H.264 data with interpolated MVS and B/P vectors
-- 4 channel MVS with B and P vectors split into individual channels
-- change model architecture (more layers, etc.)
-- change weight initialization
-
-- increase batch size for regularization
-- implement current scaling as custom torch transform
-- use transforms to augment training data

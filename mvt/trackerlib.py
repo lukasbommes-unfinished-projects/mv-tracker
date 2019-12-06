@@ -50,32 +50,6 @@ def get_vectors_by_source(motion_vectors, source):
         return motion_vectors[idx, :]
 
 
-# def normalize_vectors(motion_vectors):
-#     """Normalizes motion vectors to the past frame as reference frame.
-#
-#     The source value in the first column is set to -1 for all frames. The x and
-#     y motion values are scaled accordingly. Vector source position and
-#     destination position are unchanged.
-#
-#     Args:
-#         motion_vectors (`numpy.ndarray`): Array of shape (N, 11) containing all
-#             N motion vectors inside a frame. N = 0 is allowed meaning no vectors
-#             are present in the frame.
-#
-#     Returns:
-#         motion_vectors (`numpy.ndarray`): Array of shape (M, 11) containing the
-#         normalized motion vectors. If N = 0 => M = 0 that is an empty numpy
-#         array of shape (0, 11) is returned.
-#     """
-#     if np.shape(motion_vectors)[0] == 0:
-#         return motion_vectors
-#     else:
-#         motion_vectors[:, 7] = motion_vectors[:, 7] / motion_vectors[:, 0]  # motion_x
-#         motion_vectors[:, 8] = motion_vectors[:, 8] / motion_vectors[:, 0]  # motion_y
-#         motion_vectors[:, 0] = -1 * np.ones_like(motion_vectors[:, 0])
-#         return motion_vectors
-
-
 def normalize_vectors(motion_vectors):
     """Normalizes motion vectors to the past frame as reference frame.
 
@@ -149,17 +123,6 @@ def get_vectors_in_boxes(motion_vectors, boxes):
             # get (x_src, y_src) considering possible scaling during normalization
             src_x = motion_vectors[:, 5] + (motion_vectors[:, 0] * motion_vectors[:, 7] / motion_vectors[:, 9])
             src_y = motion_vectors[:, 6] + (motion_vectors[:, 0] * motion_vectors[:, 8] / motion_vectors[:, 9])
-            # src_x = src_x.astype(np.int)  # convert to int for higher speed
-            # src_y = src_y.astype(np.int)
-            # print("###")
-            # term_at_test = (motion_vectors[:, 0] * motion_vectors[:, 7] / motion_vectors[:, 9])
-            # print(term_at_test[-50:])
-            # print("estimated src_x", src_x[-50:])
-            # print("src_x:", motion_vectors[:, 3][-50:])
-            # print("source:", motion_vectors[:, 0][-50:])
-            # print("dst_x:", motion_vectors[:, 5][-50:])
-            # print("mx:", motion_vectors[:, 7][-50:])
-            # print("ms:", motion_vectors[:, 9][-50:])
 
             # get indices of vectors inside the box
             idx = np.where(np.logical_and(
